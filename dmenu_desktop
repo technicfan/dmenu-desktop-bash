@@ -1,0 +1,107 @@
+#!/bin/bash
+
+cachedir="$HOME/.cache/l7-dmenu-desktop"
+lockfile="$cachedir/lock"
+filecaches=(
+	"$cachedir/dmenu_desktop_global"
+	"$cachedir/dmenu_desktop_global_local"
+	"$cachedir/dmenu_desktop_local"
+	"$cachedir/dmenu_desktop_flatpak_global"
+	"$cachedir/dmenu_desktop_flatpak_local"
+)
+namecaches=(
+    "$cachedir/dmenu_desktop_names_global"
+	"$cachedir/dmenu_desktop_names_global_local"
+    "$cachedir/dmenu_desktop_names_local"
+    "$cachedir/dmenu_desktop_names_flatpak_global"
+    "$cachedir/dmenu_desktop_names_flatpak_local"
+)
+desktopdirs=(
+	"/usr/share/applications/"
+	"/usr/local/share/applications/"
+	"$HOME/.local/share/applications/"
+	"/var/lib/flatpak/exports/share/applications/"
+	"$HOME/.local/flatpak/exports/share/applications/"
+)
+
+checkrunning()
+{
+    [ ! -e "$1" ] && mkdir -p "$1"
+    if [[ -f "$2" ]]
+    then
+        echo "Already running!"
+        exit 1
+    else
+        touch "$2"
+    fi
+}
+
+get_desktop_name()
+{
+	if [[ $1 = *.desktop ]]
+	then
+		entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+		if [[ -n $entry ]] && \
+		   [[ ! $(grep "^NoDisplay=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
+		   [[ ! $(grep "^Hidden=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
+		   [[ $(grep "^Type=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "Application" ]]
+		then
+			lang=$(echo "$LANG" | awk -F "_" '{print $1}')
+			if [[ -n $lang ]] && grep -q "^Name\[$lang\]=" <(echo "${entry[@]}")
+			then
+				name=$(grep "^Name\[$lang\]=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
+			else
+				name=$(grep "^Name=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
+			fi
+			echo "$name""; ""$1"
+		fi
+	fi
+}
+
+add_remove_desktop()
+{
+	changes="$1"
+	for i in $(seq 1 "$(echo "${changes[@]}" | wc -l)")
+	do
+		change="$(echo "${changes[@]}"| awk NR=="$i")"
+		if [[ "$change" = ">"* ]]
+		then
+			file="${change//> /}"
+			get_desktop_name "$file" >> "$2"
+		elif [[ "$change" = "<"* ]]
+		then
+			file="$(sed 's/\//\\\//g' <<<"${change//< /}")"
+			sed -i "/$file/d" "$2"
+		fi
+	done
+}
+
+check_change_desktop()
+{
+	if [[ -d "$3" ]]
+	then
+		if [[ ! -f "$1" || ! -f "$2" ]]
+		then
+			find "$3" -type f,l -name "*.desktop" > "$1"
+			[[ -f "$2" ]] && rm "$2"
+			readarray -t files < "$1"
+			for file in "${files[@]}"
+			do
+				get_desktop_name "$file" >> "$2"
+			done
+		elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop")
+		then
+			diff=$(diff "$1" <(find "$3" -type f,l -name "*.desktop"))
+			add_remove_desktop "${diff[@]}" "$2"
+			find "$3" -type f,l -name "*.desktop" > "$1"
+		fi
+		awk -F "; " '{print $1}' "$2"
+	fi
+}
+
+checkrunning "$cachedir" "$lockfile"
+for i in $(seq 0 $((${#desktopdirs[@]} - 1)))
+do
+	check_change_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}"
+done
+rm "$lockfile"

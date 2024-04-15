@@ -1,0 +1,111 @@
+#!/bin/bash
+
+if [[ $1 = "--help" || $1 = "-h" ]]
+then
+    printf '%s\n' "Use --dmenu=<menu> to change menu command" \
+                "When not using --dmenu= flag arguments are passed to regular dmenu"
+    exit 0
+fi
+
+cachedir="$HOME/.cache/l7-dmenu-desktop"
+configdir="$HOME/.config/l7-dmenu-desktop"
+lockfile="$cachedir/lock"
+aliasesfile="$configdir/aliases"
+addpath="$configdir/addpath"
+excludefile="$configdir/excludes"
+filecaches=(
+	"$cachedir/dmenu_desktop_global"
+	"$cachedir/dmenu_desktop_global_local"
+	"$cachedir/dmenu_desktop_local"
+	"$cachedir/dmenu_desktop_flatpak_global"
+	"$cachedir/dmenu_desktop_flatpak_local"
+)
+namecaches=(
+    "$cachedir/dmenu_desktop_names_global"
+    "$cachedir/dmenu_desktop_names_global_local"
+    "$cachedir/dmenu_desktop_names_local"
+    "$cachedir/dmenu_desktop_names_flatpak_global"
+    "$cachedir/dmenu_desktop_names_flatpak_local"
+)
+
+checkrunning()
+{
+    if [[ -f "$1" ]]
+    then
+        echo "Already running!"
+        exit 1
+    fi
+}
+
+execute()
+{
+    if [[ -n $1 ]]
+    then
+        if [[ -f "$aliasesfile" ]] && grep -qF "alias $1=" "$aliasesfile"
+        then
+            eval "$(grep "^alias $1=" "$aliasesfile" | sed "s/alias $1=//g")"
+        else
+            for namecache in "${namecaches[@]}"
+            do
+                if [[ -f "$namecache" ]] && grep -q "^$1;" "$namecache"
+                then
+                    dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}')"
+                    return
+                fi
+            done
+            $1
+        fi
+    fi
+}
+
+exclude()
+{
+    list="$2"
+    if [[ -f "$1" ]]
+    then
+        readarray -t excludes < "$1"
+        for exclude in "${excludes[@]}"
+        do
+            if grep -qx "$exclude" <(echo "${list[@]}")
+            then
+                list=$(echo "${list[@]}" | sed "/$exclude/d")
+            fi
+        done
+    fi
+    echo "${list[@]}"
+}
+
+info()
+{
+    for i in $(seq 0 $((${#filecaches[@]} - 1)))
+    do
+        if [[ -f "${filecaches[$i]}" ]]
+        then
+            read=$((read + $(wc -l "${filecaches[$i]}" | awk '{print $1}')))
+        fi
+        if [[ -f "${namecaches[$i]}" ]]
+        then
+            found=$((found + $(wc -l "${namecaches[$i]}" | awk '{print $1}')))
+        fi
+    done
+    echo "Read $read .desktop files, found $found apps."
+}
+
+checkrunning "$lockfile"
+echo -ne "looking for changes..." && \
+if [[ -f "$addpath" ]]
+then
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop && dmenu_aliases && dmenu_path) 2>/dev/null | sort -u )")
+else
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop && dmenu_aliases) 2>/dev/null | sort -u )")
+fi &&\
+echo -ne "\r\033[K"
+info
+if [[ $1 = "--dmenu="* ]]
+then
+    menu=${1//--dmenu=/}
+else
+    menu="dmenu $*"
+fi
+selection=$(echo "${entries[@]}" | $menu)
+execute "$selection"

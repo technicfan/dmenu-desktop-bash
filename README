@@ -1,0 +1,15 @@
+l7-dmenu-desktop:
+- put scripts in your PATH
+- includes .desktop files from ~/.local/share/applications/; /usr/share/;
+  /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
+  if they exist
+    - will build cache on make install (takes 5-10 seconds on my system)
+    - after initial caching will update on change (fast)
+- includes aliases from ~/.config/l7-dmenu-desktop/aliases
+    - syntax: alias <name>=<command>
+- removes entries specified in ~/.config/l7-dmenu-desktop/excludes
+    - write one exclude per line
+- you need to install "dex"
+- to include regular binaries from PATH create ~/.config/l7-dmenu-desktop/addpath
+- to change menu that is used use --dmenu=<menu>
+    - if using dmenu (not --dmenu=), arguments will be passed to it
