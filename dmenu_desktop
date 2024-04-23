@@ -89,7 +89,7 @@ check_change_desktop()
 			do
 				get_desktop_name "$file" >> "$2"
 			done
-		elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop")
+		elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop") >/dev/null 2>&1
 		then
 			diff=$(diff "$1" <(find "$3" -type f,l -name "*.desktop"))
 			add_remove_desktop "${diff[@]}" "$2"
