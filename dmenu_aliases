@@ -27,25 +27,7 @@ get_alias_name()
     fi
 }
 
-add_remove_alias()
-{
-	changes="$1"
-	for i in $(seq 1 "$(echo "${changes[@]}" | wc -l)")
-	do
-		change="$(echo "${changes[@]}"| awk NR=="$i")"
-		if [[ "$change" = ">"* ]]
-		then
-			alias="${change//> /}"
-			get_alias_name "$alias" >> "$2"
-		elif [[ "$change" = "<"* ]]
-		then
-			alias="${change//< /}"
-			sed -i "/$(get_alias_name "$alias")/d" "$2"
-		fi
-	done
-}
-
-check_change_desktop()
+update_alias()
 {
 	if [[ -f "$3" ]]
 	then
@@ -60,14 +42,25 @@ check_change_desktop()
             done
 		elif ! diff -q "$1" "$3" >/dev/null 2>&1
 		then
-			diff=$(diff "$1" "$3")
+			readarray -t changes < <(diff "$1" "$3")
+			for change in "${changes[@]}"
+			do
+				if [[ "$change" = ">"* ]]
+				then
+					alias="${change//> /}"
+					get_alias_name "$alias" >> "$2"
+				elif [[ "$change" = "<"* ]]
+				then
+					alias="${change//< /}"
+					sed -i "/$(get_alias_name "$alias")/d" "$2"
+				fi
+			done
             cp -f "$3" "$1"
-			add_remove_alias "${diff[@]}" "$2"
 		fi
 		cat "$2"
 	fi
 }
 
 checkrunning "$cachedir" "$lockfile"
-check_change_desktop "$aliasescache" "$aliasesnamecache" "$aliasesfile"
+update_alias "$aliasescache" "$aliasesnamecache" "$aliasesfile"
 rm "$lockfile"

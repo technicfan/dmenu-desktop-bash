@@ -55,7 +55,7 @@ get_desktop_name()
 	fi
 }
 
-check_change_desktop()
+update_desktop()
 {
 	if [[ -d "$3" ]]
 	then
@@ -89,6 +89,6 @@ check_change_desktop()
 checkrunning "$cachedir" "$lockfile"
 for i in $(seq 0 $((${#desktopdirs[@]} - 1)))
 do
-	check_change_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang"
+	update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang"
 done
 rm "$lockfile"
