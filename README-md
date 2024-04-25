@@ -2,7 +2,7 @@ l7-dmenu-desktop:
 - put scripts in your PATH
 - looks for .desktop files in ~/.local/share/applications/; /usr/share/;
   /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
-    - will build cache on first run (takes 5-10 seconds on my system)
+    - will build cache on first run (takes about 2 seconds on my system with 450 .desktop files)
     - after initial caching will update on change (fast)
 - includes aliases from ~/.config/l7-dmenu-desktop/aliases
     - syntax: alias <name>=<command>

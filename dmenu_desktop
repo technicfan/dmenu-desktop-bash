@@ -83,12 +83,8 @@ check_change_desktop()
 		if [[ ! -f "$1" || ! -f "$2" ]]
 		then
 			find "$3" -type f,l -name "*.desktop" > "$1"
-			[[ -f "$2" ]] && rm "$2"
-			readarray -t files < "$1"
-			for file in "${files[@]}"
-			do
-				get_desktop_name "$file" >> "$2"
-			done
+			export -f get_desktop_name
+			parallel -j12 get_desktop_name :::: "$1" > "$2"
 		elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop") >/dev/null 2>&1
 		then
 			diff=$(diff "$1" <(find "$3" -type f,l -name "*.desktop"))
