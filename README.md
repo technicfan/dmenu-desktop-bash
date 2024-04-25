@@ -11,8 +11,12 @@ l7-dmenu-desktop:
 - to include regular binaries from PATH create ~/.config/l7-dmenu-desktop/addpath
 - to change menu that is used use --dmenu=<menu>
     - if using dmenu (not --dmenu=), arguments will be passed to it
+
+! Important !
 - dependencies (that where not installed on my ArcoLinux system):
     - dmenu (or other similar menu)
     - dex
     - parallel
     - awk
+- if you are not using alacritty change the terminal manually in l7-dmenu-desktop (line 52)
+- if you want to use less or more than 12 cores change it manually in dmenu_desktop (line 66)
