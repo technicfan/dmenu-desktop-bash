@@ -38,30 +38,27 @@ checkrunning()
 
 get_desktop_name()
 {
-	if [[ $1 = *.desktop ]]
+	entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+	if [[ -n $entry ]] && \
+	   [[ ! $(grep "^NoDisplay=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
+	   [[ ! $(grep "^Hidden=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
+	   [[ $(grep "^Type=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "Application" ]]
 	then
-		entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
-		if [[ -n $entry ]] && \
-		   [[ ! $(grep "^NoDisplay=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
-		   [[ ! $(grep "^Hidden=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "true" ]] && \
-		   [[ $(grep "^Type=" <(echo "${entry[@]}") | awk -F "=" '{print $2}') = "Application" ]]
+		lang=$(echo "$LANG" | awk -F "_" '{print $1}')
+		if [[ -n $lang ]] && grep -q "^Name\[$lang\]=" <(echo "${entry[@]}")
 		then
-			lang=$(echo "$LANG" | awk -F "_" '{print $1}')
-			if [[ -n $lang ]] && grep -q "^Name\[$lang\]=" <(echo "${entry[@]}")
-			then
-				name=$(grep "^Name\[$lang\]=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
-			else
-				name=$(grep "^Name=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
-			fi
-			echo "$name""; ""$1"
+			name=$(grep "^Name\[$lang\]=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
+		else
+			name=$(grep "^Name=" <(echo "${entry[@]}") | awk -F "=" '{print $2}' | awk NR==1)
 		fi
+		echo "$name""; ""$1"
 	fi
 }
 
 add_remove_desktop()
 {
 	changes="$1"
-	for i in $(seq 1 "$(echo "${changes[@]}" | wc -l)")
+	for i in $(seq 2 "$(echo "${changes[@]}" | wc -l)")
 	do
 		change="$(echo "${changes[@]}"| awk NR=="$i")"
 		if [[ "$change" = ">"* ]]
@@ -87,9 +84,10 @@ check_change_desktop()
 			parallel -j12 get_desktop_name :::: "$1" > "$2"
 		elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop") >/dev/null 2>&1
 		then
-			diff=$(diff "$1" <(find "$3" -type f,l -name "*.desktop"))
+			files=$(find "$3" -type f,l -name "*.desktop")
+			diff=$(diff "$1" <(echo "$files"))
 			add_remove_desktop "${diff[@]}" "$2"
-			find "$3" -type f,l -name "*.desktop" > "$1"
+			echo "$files" > "$1"
 		fi
 		awk -F "; " '{print $1}' "$2"
 	fi
