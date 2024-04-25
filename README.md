@@ -5,11 +5,11 @@ l7-dmenu-desktop:
     - will build cache on first run (takes about 1.5 seconds on my system with 450 .desktop files)
     - after initial caching will update on change (faster)
 - includes aliases from ~/.config/l7-dmenu-desktop/aliases
-    - syntax: alias <name>=<command>
+    - syntax: alias "<name>=<command>"
 - removes entries specified in ~/.config/l7-dmenu-desktop/excludes
     - write one exclude per line
 - to include regular binaries from PATH create ~/.config/l7-dmenu-desktop/addpath
-- to change menu that is used use --dmenu=<menu>
+- to change menu that is used use --dmenu="<menu>"
     - if using dmenu (not --dmenu=), arguments will be passed to it
 
 ! Important !
