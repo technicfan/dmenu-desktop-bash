@@ -53,7 +53,7 @@ execute()
                     return
                 fi
             done
-            $1
+            command "$1"
         fi
     fi
 }
