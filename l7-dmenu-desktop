@@ -100,7 +100,7 @@ else
     entries=$(exclude "$excludefile" "$( (dmenu_desktop && dmenu_aliases) 2>/dev/null | sort -u )")
 fi &&\
 echo -ne "\r\033[K"
-info
+#info
 if [[ $1 = "--dmenu="* ]]
 then
     menu=${1//--dmenu=/}
