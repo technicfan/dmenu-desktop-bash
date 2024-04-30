@@ -9,7 +9,8 @@ fi
 
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
-lockfile="$cachedir/lock"
+lockfile_aliases="$cachedir/lock_aliases"
+lockfile_desktop="$cachedir/lock_desktop"
 aliasesfile="$configdir/aliases"
 addpath="$configdir/addpath"
 excludefile="$configdir/excludes"
@@ -30,9 +31,9 @@ namecaches=(
 
 checkrunning()
 {
-    if [[ -f "$1" ]]
+    if [[ -f "$1" || -f "$2" ]]
     then
-        echo "Already running!"
+        echo "Already running!" >&2
         exit 1
     fi
 }
@@ -49,7 +50,7 @@ execute()
             do
                 if [[ -f "$namecache" ]] && grep -q "^$1;" "$namecache"
                 then
-                    dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}')"
+                    dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}')" &
                     return
                 fi
             done
@@ -66,10 +67,7 @@ exclude()
         readarray -t excludes < "$1"
         for exclude in "${excludes[@]}"
         do
-            if grep -qx "$exclude" <(echo "${list[@]}")
-            then
-                list=$(echo "${list[@]}" | sed "/$exclude/d")
-            fi
+            list=$(sed "/^$exclude$/d" <(echo "${list[@]}"))
         done
     fi
     echo "${list[@]}"
@@ -91,14 +89,14 @@ info()
     echo "Read $read .desktop files, found $found apps."
 }
 
-checkrunning "$lockfile"
+checkrunning "$lockfile_aliases" "$lockfile_desktop"
 echo -ne "looking for changes..." && \
 if [[ -f "$addpath" ]]
 then
-    entries=$(exclude "$excludefile" "$( (dmenu_desktop && dmenu_aliases && dmenu_path) 2>/dev/null | sort -u )")
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases & dmenu_path) 2>/dev/null | sort -u )")
 else
-    entries=$(exclude "$excludefile" "$( (dmenu_desktop && dmenu_aliases) 2>/dev/null | sort -u )")
-fi &&\
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null | sort -u )")
+fi && \
 echo -ne "\r\033[K"
 #info
 if [[ $1 = "--dmenu="* ]]

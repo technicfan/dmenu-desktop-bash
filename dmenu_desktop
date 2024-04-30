@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cachedir="$HOME/.cache/l7-dmenu-desktop"
-lockfile="$cachedir/lock"
+lockfile="$cachedir/lock_desktop"
 lang=$(echo "$LANG" | awk -F "_" '{print $1}')
 filecaches=(
 	"$cachedir/dmenu_desktop_global"
@@ -30,7 +30,7 @@ checkrunning()
     [ ! -e "$1" ] && mkdir -p "$1"
     if [[ -f "$2" ]]
     then
-        echo "Already running!"
+        echo "Already running!" >&2
         exit 1
     else
         touch "$2"
@@ -89,6 +89,6 @@ update_desktop()
 checkrunning "$cachedir" "$lockfile"
 for i in $(seq 0 $((${#desktopdirs[@]} - 1)))
 do
-	update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang"
+	update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang" &
 done
 rm "$lockfile"
