@@ -75,10 +75,10 @@ exclude()
 
 info()
 {
-    for i in $(seq 0 $((${#filecaches[@]} - 1)))
+    for i in "${!filecaches[@]}"
     do
         if [[ -f "${filecaches[$i]}" ]]
-        then
+       then
             read=$((read + $(wc -l "${filecaches[$i]}" | awk '{print $1}')))
         fi
         if [[ -f "${namecaches[$i]}" ]]

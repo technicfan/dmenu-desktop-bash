@@ -87,8 +87,13 @@ update_desktop()
 }
 
 checkrunning "$cachedir" "$lockfile"
-for i in $(seq 0 $((${#desktopdirs[@]} - 1)))
+for i in "${!desktopdirs[@]}"
 do
-	update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang" &
+    update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang" &
+    pids+=($!)
+done
+for pid in "${pids[@]}"
+do
+    wait "$pid"
 done
 rm "$lockfile"
