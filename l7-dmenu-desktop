@@ -79,11 +79,11 @@ info()
     do
         if [[ -f "${filecaches[$i]}" ]]
        then
-            read=$((read + $(wc -l "${filecaches[$i]}" | awk '{print $1}')))
+            read=$((read + $(wc -l < "${filecaches[$i]}")))
         fi
         if [[ -f "${namecaches[$i]}" ]]
         then
-            found=$((found + $(wc -l "${namecaches[$i]}" | awk '{print $1}')))
+            found=$((found + $(wc -l < "${namecaches[$i]}")))
         fi
     done
     echo "Read $read .desktop files, found $found apps."
@@ -98,7 +98,7 @@ else
     entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null | sort -u )")
 fi && \
 echo -ne "\r\033[K"
-#info
+info &
 if [[ $1 = "--dmenu="* ]]
 then
     menu=${1//--dmenu=/}
