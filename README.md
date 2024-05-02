@@ -18,5 +18,5 @@ l7-dmenu-desktop:
     - dex
     - parallel
     - awk
-- if you are not using alacritty change the terminal manually in l7-dmenu-desktop (line 52)
+- if you are not using alacritty change the terminal manually in l7-dmenu-desktop (line 53)
 - if you want to use less or more than 12 cores change it manually in dmenu_desktop (line 66)
