@@ -50,7 +50,7 @@ execute()
             do
                 if [[ -f "$namecache" ]] && grep -q "^$1;" "$namecache"
                 then
-                    dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}')" &
+                    dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}' | awk NR==1)" &
                     return
                 fi
             done
