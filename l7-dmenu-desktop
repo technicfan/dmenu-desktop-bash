@@ -15,18 +15,18 @@ aliasesfile="$configdir/aliases"
 addpath="$configdir/addpath"
 excludefile="$configdir/excludes"
 filecaches=(
-	"$cachedir/dmenu_desktop_global"
-	"$cachedir/dmenu_desktop_global_local"
-	"$cachedir/dmenu_desktop_local"
-	"$cachedir/dmenu_desktop_flatpak_global"
-	"$cachedir/dmenu_desktop_flatpak_local"
+	"$cachedir/files_global"
+	"$cachedir/files_global_local"
+	"$cachedir/files_local"
+	"$cachedir/files_flatpak_global"
+	"$cachedir/files_flatpak_local"
 )
 namecaches=(
-    "$cachedir/dmenu_desktop_names_global"
-    "$cachedir/dmenu_desktop_names_global_local"
-    "$cachedir/dmenu_desktop_names_local"
-    "$cachedir/dmenu_desktop_names_flatpak_global"
-    "$cachedir/dmenu_desktop_names_flatpak_local"
+    "$cachedir/names_global"
+    "$cachedir/names_global_local"
+    "$cachedir/names_local"
+    "$cachedir/names_flatpak_global"
+    "$cachedir/names_flatpak_local"
 )
 
 checkrunning()

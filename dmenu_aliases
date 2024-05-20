@@ -3,8 +3,8 @@
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_aliases"
-aliasescache="$cachedir/dmenu_aliases"
-aliasesnamecache="$cachedir/dmenu_aliases_names"
+aliasescache="$cachedir/aliases"
+aliasesnamecache="$cachedir/names_aliases"
 aliasesfile="$configdir/aliases"
 
 checkrunning()

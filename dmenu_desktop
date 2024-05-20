@@ -4,25 +4,25 @@ cachedir="$HOME/.cache/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
 lang=$(echo "$LANG" | awk -F "_" '{print $1}')
 filecaches=(
-	"$cachedir/dmenu_desktop_global"
-	"$cachedir/dmenu_desktop_global_local"
-	"$cachedir/dmenu_desktop_local"
-	"$cachedir/dmenu_desktop_flatpak_global"
-	"$cachedir/dmenu_desktop_flatpak_local"
+	"$cachedir/files_global"
+	"$cachedir/files_global_local"
+	"$cachedir/files_local"
+	"$cachedir/files_flatpak_global"
+	"$cachedir/files_flatpak_local"
 )
 namecaches=(
-    "$cachedir/dmenu_desktop_names_global"
-	"$cachedir/dmenu_desktop_names_global_local"
-    "$cachedir/dmenu_desktop_names_local"
-    "$cachedir/dmenu_desktop_names_flatpak_global"
-    "$cachedir/dmenu_desktop_names_flatpak_local"
+    "$cachedir/names_global"
+	"$cachedir/names_global_local"
+    "$cachedir/names_local"
+    "$cachedir/names_flatpak_global"
+    "$cachedir/names_flatpak_local"
 )
 desktopdirs=(
-	"/usr/share/applications/"
-	"/usr/local/share/applications/"
-	"$HOME/.local/share/applications/"
-	"/var/lib/flatpak/exports/share/applications/"
-	"$HOME/.local/flatpak/exports/share/applications/"
+	"/usr/share/applications"
+	"/usr/local/share/applications"
+	"$HOME/.local/share/applications"
+	"/var/lib/flatpak/exports/share/applications"
+	"$HOME/.local/flatpak/exports/share/applications"
 )
 
 checkrunning()
@@ -43,7 +43,7 @@ get_desktop_name()
 	if [[ -n $entry ]] && \
 	   ! grep -q "^NoDisplay=true" <(echo "${entry[@]}") && \
 	   ! grep -q "^Hidden=true" <(echo "${entry[@]}") && \
-	   grep -q "^Type=Application" <(echo "${entry[@]}")
+	     grep -q "^Type=Application" <(echo "${entry[@]}")
 	then
 		if grep -q "^Name\[$2\]=" <(echo "${entry[@]}")
 		then
@@ -51,7 +51,10 @@ get_desktop_name()
 		else
 			name=$(awk -F "=" '{print $2}' <(grep "^Name=" <(echo "${entry[@]}")))
 		fi
-		echo "$name""; ""$1"
+		if [[ -n $name ]]
+		then
+			echo "$name""; ""$1"
+		fi
 	fi
 }
 
