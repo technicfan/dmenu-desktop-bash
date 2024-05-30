@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cachedir="$HOME/.cache/l7-dmenu-desktop"
-lockfile="$cachedir/lock_desktop"
+lockfile="$cachedir/lock"
 lang=$(echo "$LANG" | awk -F "_" '{print $1}')
 filecaches=(
 	"$cachedir/files_global"
