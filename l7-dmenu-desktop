@@ -9,8 +9,7 @@ fi
 
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
-lockfile_aliases="$cachedir/lock_aliases"
-lockfile_desktop="$cachedir/lock_desktop"
+lockfile="$cachedir/lock_desktop"
 aliasesfile="$configdir/aliases"
 addpath="$configdir/addpath"
 excludefile="$configdir/excludes"
@@ -31,7 +30,7 @@ namecaches=(
 
 checkrunning()
 {
-    if [[ -f "$1" || -f "$2" ]]
+    if [[ -f "$1" ]]
     then
         echo "Already running!" >&2
         exit 1
@@ -42,7 +41,7 @@ execute()
 {
     if [[ -n $1 ]]
     then
-        if [[ -f "$aliasesfile" ]] && grep -qF "alias $1=" "$aliasesfile"
+        if [[ -f "$aliasesfile" ]] && grep -q "^alias $1=" "$aliasesfile"
         then
             eval "$(grep "^alias $1=" "$aliasesfile" | sed "s/alias $1=//g")"
         else
@@ -89,13 +88,14 @@ info()
     echo "Read $read .desktop files, found $found apps."
 }
 
-checkrunning "$lockfile_aliases" "$lockfile_desktop"
+checkrunning "$lockfile"
+aliases=$([ -f "$aliasesfile" ] && grep "^alias" "$aliasesfile" | awk -F "=" '{print $1}' | sed 's/alias //g')
 echo -ne "looking for changes..." && \
 if [[ -f "$addpath" ]]
 then
-    entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases & dmenu_path) 2>/dev/null | sort -u )")
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_path & [ -n "$aliases" ] && echo "${aliases[@]}") 2>/dev/null | sort -u )")
 else
-    entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null | sort -u )")
+    entries=$(exclude "$excludefile" "$( (dmenu_desktop & [ -n "$aliases" ] && echo "${aliases[@]}") 2>/dev/null | sort -u )")
 fi && \
 echo -ne "\r\033[K"
 info &
