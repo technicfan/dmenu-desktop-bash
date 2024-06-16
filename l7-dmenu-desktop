@@ -54,7 +54,7 @@ execute()
                     return
                 fi
             done
-            command "$1"
+            command -v "$(echo "$1" | awk '{print $1}')" && $1
         fi
     fi
 }
