@@ -12,7 +12,7 @@ l7-dmenu-desktop:
 - to change menu that is used use --dmenu=\<menu\>
     - if using dmenu (not --dmenu=), arguments will be passed to it
 
-! Important !
+**! Important !**
 - dependencies (that where not installed on my ArcoLinux system):
     - dmenu (or other similar menu)
     - dex
