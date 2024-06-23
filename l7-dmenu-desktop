@@ -54,7 +54,7 @@ execute()
                     return
                 fi
             done
-            command -v "$(echo "$1" | awk '{print $1}')" && $1
+            command -v "$(echo "$1" | awk '{print $1}')" && [[ $(printf "No\nYes" | dmenu -i -p "Run \"$1\" as shell command?") = "Yes" ]] && $1
         fi
     fi
 }
