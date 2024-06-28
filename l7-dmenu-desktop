@@ -176,6 +176,7 @@ main()
             if [[ -f "$aliasesfile" ]] && grep -q "^alias $1=" "$aliasesfile"
             then
                 eval "$(sed "s/^alias $1=//g" "$aliasesfile")"
+                return
             else
                 for namecache in "${namecaches[@]}"
                 do
@@ -185,9 +186,15 @@ main()
                         return
                     fi
                 done
-                command -v "$(echo "$1" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
-                    eval "${menu//~prompt~/\'${prompt2//~command~/\"$1\"}\'}") = "Yes" ]] && $1
             fi
+            if ! [[ $1 = ^"~"* ]]
+            then
+                command="${1:1}"
+            else
+                command="$1"
+            fi
+            command -v "$(echo "$command" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
+                        eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]] && $1
         fi
     }
 
@@ -224,7 +231,7 @@ main()
     checkrunning "$lockfile_aliases" "$lockfile_desktop"
     [[ -f "$configfile" ]] && source "$configfile"
     [[ -z "$prompt1" ]] && prompt1="Run:"
-    [[ -z "$prompt2" ]] && prompt2="Run ~command~ as shell command?"
+    [[ -z "$prompt2" ]] && prompt2="Run shell command ~command~?"
     echo -ne "looking for changes..." && \
     if [[ $addpath = 1 ]]
     then
