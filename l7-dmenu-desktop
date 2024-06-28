@@ -231,7 +231,7 @@ main()
     checkrunning "$lockfile_aliases" "$lockfile_desktop"
     [[ -f "$configfile" ]] && source "$configfile"
     [[ -z "$prompt1" ]] && prompt1="Run:"
-    [[ -z "$prompt2" ]] && prompt2="Run shell command ~command~?"
+    [[ -z "$prompt2" ]] && prompt2="Run ~command~ in bash?"
     echo -ne "looking for changes..." && \
     if [[ $addpath = 1 ]]
     then
