@@ -187,14 +187,15 @@ main()
                     fi
                 done
             fi
-            if ! [[ $1 = ^"~"* ]]
+            if [[ $1 = $"~"* ]]
             then
                 command="${1:1}"
             else
-                command="$1"
+                command=$1
             fi
+            echo $command
             command -v "$(echo "$command" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
-                        eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]] && $1
+                        eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]] && $command
         fi
     }
 
