@@ -161,6 +161,7 @@ main()
 {
     checkrunning()
     {
+        [[ ! -e "$cachedir" ]] && mkdir "$cachedir"
         if [[ -f "$1" || -f "$2" ]]
         then
             echo "Already running!" >&2
