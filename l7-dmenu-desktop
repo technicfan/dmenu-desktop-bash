@@ -4,7 +4,7 @@ if [[ $1 = "--help" || $1 = "-h" ]]
 then
     printf '%s\n' "Use --dmenu=<menu> to change menu command" \
                 "When not using --dmenu= flag arguments are passed to regular dmenu"\
-                    "instead of your desired prompt write ~Prompt~ without \' or \""
+                    "instead of your desired prompt write ~prompt~ without \' or \""
     exit 0
 fi
 
@@ -57,7 +57,7 @@ execute()
                 fi
             done
             command -v "$(echo "$1" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
-                eval "${menu//~prompt~/\'Run \"$1\" as shell command?\'}") = "Yes" ]] && $1
+                eval "${menu//~prompt~/\'${prompt2//~command~/\"$1\"}\'}") = "Yes" ]] && $1
         fi
     fi
 }
@@ -112,14 +112,8 @@ if [[ -f "$promptsfile" ]]
 then
     prompt1=$(awk NR==1 "$promptsfile")
     prompt2=$(awk NR==2 "$promptsfile")
-    if [[ -n "$prompt1" ]]
-    then
-        prompt1="Run:"
-    fi
-    if [[ -n "$prompt2" ]]
-    then 
-        prompt2="Run ~command~ as shell command?"
-    fi
 fi
-selection=$(echo "${entries[@]}" | ${menu//~prompt~/Run:})
+[[ -z "$prompt1" ]] && prompt1="Run:"
+[[ -z "$prompt2" ]] && prompt2="Run ~command~ as shell command?"
+selection=$(echo "${entries[@]}" | ${menu//~prompt~/$prompt1})
 execute "$selection"
