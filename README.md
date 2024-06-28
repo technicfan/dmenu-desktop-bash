@@ -11,6 +11,7 @@ l7-dmenu-desktop:
 - to include regular binaries from PATH create ~/.config/l7-dmenu-desktop/addpath
 - to change menu that is used use --dmenu=\<menu\>
     - if using dmenu (not --dmenu=), arguments will be passed to it
+- instead of your desired prompt write ~Prompt~ without ' or "
 
 **! Important !**
 - dependencies (that where not installed on my ArcoLinux system):

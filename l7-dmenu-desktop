@@ -3,7 +3,8 @@
 if [[ $1 = "--help" || $1 = "-h" ]]
 then
     printf '%s\n' "Use --dmenu=<menu> to change menu command" \
-                "When not using --dmenu= flag arguments are passed to regular dmenu"
+                "When not using --dmenu= flag arguments are passed to regular dmenu"\
+                    "instead of your desired prompt write ~Prompt~ without \' or \""
     exit 0
 fi
 
@@ -14,6 +15,7 @@ lockfile_desktop="$cachedir/lock_desktop"
 aliasesfile="$configdir/aliases"
 addpath="$configdir/addpath"
 excludefile="$configdir/excludes"
+promptsfile="$configdir/prompts"
 filecaches=(
 	"$cachedir/files_global"
 	"$cachedir/files_global_local"
@@ -54,7 +56,8 @@ execute()
                     return
                 fi
             done
-            command -v "$(echo "$1" | awk '{print $1}')" && [[ $(printf "No\nYes" | dmenu -i -p "Run \"$1\" as shell command?") = "Yes" ]] && $1
+            command -v "$(echo "$1" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
+                eval "${menu//~prompt~/\'Run \"$1\" as shell command?\'}") = "Yes" ]] && $1
         fi
     fi
 }
@@ -105,5 +108,18 @@ then
 else
     menu="dmenu $*"
 fi
-selection=$(echo "${entries[@]}" | $menu)
+if [[ -f "$promptsfile" ]]
+then
+    prompt1=$(awk NR==1 "$promptsfile")
+    prompt2=$(awk NR==2 "$promptsfile")
+    if [[ -n "$prompt1" ]]
+    then
+        prompt1="Run:"
+    fi
+    if [[ -n "$prompt2" ]]
+    then 
+        prompt2="Run ~command~ as shell command?"
+    fi
+fi
+selection=$(echo "${entries[@]}" | ${menu//~prompt~/Run:})
 execute "$selection"
