@@ -18,7 +18,6 @@ configfile="$configdir/config"
 lang=$(echo "$LANG" | awk -F "_" '{print $1}')
 aliasescache="$cachedir/aliases"
 aliasesnamecache="$cachedir/names_aliases"
-aliasesfile="$configdir/aliases"
 filecaches=(
 	"$cachedir/files_global"
 	"$cachedir/files_global_local"
@@ -232,7 +231,7 @@ main()
     checkrunning "$lockfile_aliases" "$lockfile_desktop"
     [[ -f "$configfile" ]] && source "$configfile"
     [[ -z "$prompt1" ]] && prompt1="Run:"
-    [[ -z "$prompt2" ]] && prompt2="Run ~command~ in bash?"
+    [[ -z "$prompt2" ]] && prompt2="Run ~command~ with bash?"
     echo -ne "looking for changes..." && \
     if [[ $addpath = 1 ]]
     then
