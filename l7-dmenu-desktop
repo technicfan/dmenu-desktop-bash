@@ -192,9 +192,13 @@ main()
             else
                 command=$1
             fi
-            echo $command
-            command -v "$(echo "$command" | awk '{print $1}')" && [[ $(printf "No\nYes" | \
-                        eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]] && $command
+            if command -v "$(echo "$command" | awk '{print $1}')"
+            then
+                [[ $(printf "No\nYes" | eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]] && $command
+            else
+                notify-send -a "l7-dmenu-desktop_error" "Invalid command"
+                $0 "$2"
+            fi
         fi
     }
 
@@ -248,7 +252,7 @@ main()
         menu="dmenu $*"
     fi
     selection=$(echo "${entries[@]}" | ${menu//~prompt~/$prompt1})
-    execute "$selection"
+    execute "$selection" "$*"
 }
 
 main "$@"
