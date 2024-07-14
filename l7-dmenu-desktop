@@ -239,9 +239,9 @@ main()
     echo -ne "looking for changes..." && \
     if [[ $addpath = 1 ]]
     then
-        entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases & dmenu_path) 2>/dev/null | sort -u )")
+        entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases & dmenu_path) 2>/dev/null )")
     else
-        entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null | sort -u )")
+        entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null )")
     fi && \
     echo -ne "\r\033[K"
     info &
@@ -251,7 +251,7 @@ main()
     else
         menu="dmenu $*"
     fi
-    selection=$(echo "${entries[@]}" | ${menu//~prompt~/$prompt1})
+    selection=$(echo "${entries[@]}" | sort -u | ${menu//~prompt~/$prompt1})
     execute "$selection" "$*"
 }
 
