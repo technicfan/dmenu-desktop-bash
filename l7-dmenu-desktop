@@ -58,7 +58,6 @@ dmenu_desktop()
                 parallel -j12 get_desktop_name ::: "$files" ::: "$3" >> "$1"
             elif [[ "$cached_files" != "$files" ]]
             then
-                notify-send "noob"
                 readarray -t changes < <(diff <(echo "$cached_files") <(echo "$files"))
                 for change in "${changes[@]}"
                 do
@@ -71,7 +70,7 @@ dmenu_desktop()
                         file="$(sed 's/\//\\\//g' <<<"${change//< /}")"
                         name="$(grep "$file" "$1" | awk -F "; " '{print $1}')"
                         sed -i "/; $file; /d" "$1"
-                        sed -i "s/$name ([0-9])/$name/g" "$1"
+                        sed -i "s/^$name ([0-9])/$name/g" "$1"
                     fi
                 done
             fi
@@ -174,7 +173,7 @@ main()
             else
                 if [[ -f "$appcache" ]] && grep -q "^$1;" "$appcache"
                 then
-                    dex --term alacritty "$(grep "^$1;" "$appcache" | awk -F "; " '{print $2}')" &
+                    dex --term "$term" "$(grep "^$1;" "$appcache" | awk -F "; " '{print $2}')" &
                     return
                 fi
             fi
@@ -233,6 +232,7 @@ main()
     [[ -f "$configfile" ]] && source "$configfile"
     [[ -z "$prompt1" ]] && prompt1="Run:"
     [[ -z "$prompt2" ]] && prompt2="Run ~command~ with bash?"
+    [[ -z "$term" ]] && term="alacritty"
     echo -ne "looking for changes..." && \
     if [[ $addpath = 1 ]]
     then

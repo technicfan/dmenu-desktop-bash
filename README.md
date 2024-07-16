@@ -18,6 +18,8 @@ l7-dmenu-desktop:
         - use \~command\~ to insert the command that is asked to be run
 - write ~\<command\> into the menu to directly run it in bash
 - to clear the cache use --clear
+- if you are not using alacritty change the terminal by adding term=\<terminal\>
+  to ~/.config/l7-dmenu-desktop/config
 
 **Important**
 - dependencies (that where not installed on my ArcoLinux system):
@@ -25,5 +27,4 @@ l7-dmenu-desktop:
     - dex
     - parallel
     - awk
-- if you are not using alacritty change the terminal manually in line 184
-- if you want to use less or more than 12 cores change it manually in line 74
+- if you want to use less or more than 12 cores change it manually in line 58
