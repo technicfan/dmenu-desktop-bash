@@ -1,13 +1,5 @@
 #!/bin/bash
 
-if [[ $1 = "--help" || $1 = "-h" ]]
-then
-    printf '%s\n' "Use --dmenu=<menu> to change menu command" \
-                "When not using --dmenu= flag arguments are passed to regular dmenu"\
-                    "instead of your desired prompt write ~prompt~ without \' or \""
-    exit 0
-fi
-
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile_aliases="$cachedir/lock_aliases"
@@ -18,20 +10,7 @@ configfile="$configdir/config"
 lang=$(echo "$LANG" | awk -F "_" '{print $1}')
 aliasescache="$cachedir/aliases"
 aliasesnamecache="$cachedir/names_aliases"
-filecaches=(
-	"$cachedir/files_global"
-	"$cachedir/files_global_local"
-	"$cachedir/files_local"
-	"$cachedir/files_flatpak_global"
-	"$cachedir/files_flatpak_local"
-)
-namecaches=(
-    "$cachedir/names_global"
-    "$cachedir/names_global_local"
-    "$cachedir/names_local"
-    "$cachedir/names_flatpak_global"
-    "$cachedir/names_flatpak_local"
-)
+appcache="$cachedir/apps"
 desktopdirs=(
     "/usr/share/applications"
     "/usr/local/share/applications"
@@ -44,66 +23,82 @@ dmenu_desktop()
 {
     get_desktop_name()
     {
-        entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+        [[ -f "$1" ]] && entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         if [[ -n $entry ]] && \
-        ! grep -q "^NoDisplay=true" <(echo "${entry[@]}") && \
-        ! grep -q "^Hidden=true" <(echo "${entry[@]}") && \
-            grep -q "^Type=Application" <(echo "${entry[@]}")
+        ! grep -q "^NoDisplay=true" <(echo "$entry") && \
+        ! grep -q "^Hidden=true" <(echo "$entry") && \
+            grep -q "^Type=Application" <(echo "$entry")
         then
-            if grep -q "^Name\[$2\]=" <(echo "${entry[@]}")
+            if grep -q "^Name\[$2\]=" <(echo "$entry")
             then
-                name=$(awk -F "=" '{print $2}' <(grep "^Name\[$2\]=" <(echo "${entry[@]}")))
+                name=$(awk -F "=" '{print $2}' <(grep "^Name\[$2\]=" <(echo "$entry")))
             else
-                name=$(awk -F "=" '{print $2}' <(grep "^Name=" <(echo "${entry[@]}")))
+                name=$(awk -F "=" '{print $2}' <(grep "^Name=" <(echo "$entry")))
             fi
             if [[ -n $name ]]
             then
-                echo "$name""; ""$1"
+                echo "$name""; ""$1""; 1"
+            else
+                echo "hidden; ""$1""; 0"
             fi
+        else
+            echo "hidden; ""$1""; 0"
         fi
     }
 
     update_desktop()
     {
-        if [[ -d "$3" ]]
+        if [[ -d "$2" ]]
         then
-            if [[ ! -f "$1" || ! -f "$2" ]]
+            files=$(find "$2" -type f,l -name "*.desktop" | sort -u)
+            [[ -f "$1" ]] && cached_files=$(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
+            if [[ -z "$cached_files" ]]
             then
-                find "$3" -type f,l -name "*.desktop" > "$1"
                 export -f get_desktop_name
-                parallel -j12 get_desktop_name :::: "$1" ::: "$4" > "$2"
-            elif ! diff -q "$1" <(find "$3" -type f,l -name "*.desktop") >/dev/null 2>&1
+                parallel -j12 get_desktop_name ::: "$files" ::: "$3" >> "$1"
+            elif [[ "$cached_files" != "$files" ]]
             then
-                files=$(find "$3" -type f,l -name "*.desktop")
-                readarray -t changes < <(diff "$1" <(echo "$files"))
+                notify-send "noob"
+                readarray -t changes < <(diff <(echo "$cached_files") <(echo "$files"))
                 for change in "${changes[@]}"
                 do
                     if [[ "$change" = ">"* ]]
                     then
                         file="${change//> /}"
-                        get_desktop_name "$file" "$4" >> "$2"
+                        get_desktop_name "$file" "$3" >> "$1"
                     elif [[ "$change" = "<"* ]]
                     then
                         file="$(sed 's/\//\\\//g' <<<"${change//< /}")"
-                        sed -i "/$file/d" "$2"
+                        name="$(grep "$file" "$1" | awk -F "; " '{print $1}')"
+                        sed -i "/; $file; /d" "$1"
+                        sed -i "s/$name ([0-9])/$name/g" "$1"
                     fi
                 done
-                echo "$files" > "$1"
             fi
-            awk -F "; " '{print $1}' "$2"
         fi
     }
 
     touch "$lockfile_desktop"
     for i in "${!desktopdirs[@]}"
     do
-        update_desktop "${filecaches[i]}" "${namecaches[i]}" "${desktopdirs[i]}" "$lang" &
+        update_desktop "$appcache" "${desktopdirs[i]}" "$lang" &
         pids+=($!)
     done
     for pid in "${pids[@]}"
     do
         wait "$pid"
     done
+    awk -i inplace -F "; " '
+    {
+        count[$1]++
+        if (count[$1] == 1 || $1 == "hidden") {
+            print $0
+        } else {
+            print $1 " (" count[$1]-1 "); " $2 "; " $3
+        }
+    }
+    ' "$appcache"
+    grep "; 1$" "$appcache" | awk -F "; " '{print $1}'
     rm "$lockfile_desktop"
 }
 
@@ -177,14 +172,11 @@ main()
                 eval "$(sed "s/^alias $1=//g" "$aliasesfile")"
                 return
             else
-                for namecache in "${namecaches[@]}"
-                do
-                    if [[ -f "$namecache" ]] && grep -q "^$1;" "$namecache"
-                    then
-                        dex --term alacritty "$(grep "^$1;" "$namecache" | awk -F "; " '{print $2}' | awk NR==1)" &
-                        return
-                    fi
-                done
+                if [[ -f "$appcache" ]] && grep -q "^$1;" "$appcache"
+                then
+                    dex --term alacritty "$(grep "^$1;" "$appcache" | awk -F "; " '{print $2}')" &
+                    return
+                fi
             fi
             if [[ $1 = $"~"* ]]
             then
@@ -216,21 +208,26 @@ main()
         echo "${list[@]}"
     }
 
-    info()
-    {
-        for i in "${!filecaches[@]}"
-        do
-            if [[ -f "${filecaches[$i]}" ]]
-        then
-                read=$((read + $(wc -l < "${filecaches[$i]}")))
-            fi
-            if [[ -f "${namecaches[$i]}" ]]
-            then
-                found=$((found + $(wc -l < "${namecaches[$i]}")))
-            fi
-        done
-        echo "Read $read .desktop files, found $found apps."
-    }
+    for arg in "$@"
+    do
+        case $arg in
+        -h|--help)
+            printf '%s\n' "Use --dmenu=<menu> to change menu command" \
+                "When not using --dmenu= flag arguments are passed to regular dmenu"\
+                    "instead of your desired prompt write ~prompt~ without \' or \""
+            exit 0
+            ;;
+        --dmenu=*)
+            menu=${arg//--dmenu=/}
+            ;;
+        --clear)
+            rm "$aliasescache"
+            rm "$aliasesnamecache"
+            rm "$appcache"
+            c=1
+            ;;
+        esac
+    done
 
     checkrunning "$lockfile_aliases" "$lockfile_desktop"
     [[ -f "$configfile" ]] && source "$configfile"
@@ -244,12 +241,15 @@ main()
         entries=$(exclude "$excludefile" "$( (dmenu_desktop & dmenu_aliases) 2>/dev/null )")
     fi && \
     echo -ne "\r\033[K"
-    info &
-    if [[ $1 = "--dmenu="* ]]
+    echo "Read $(wc -l < "$appcache") .desktop files, found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
+    if [[ -z "$menu" ]]
     then
-        menu=${1//--dmenu=/}
-    else
-        menu="dmenu $*"
+        if [[ $c = 1 ]]
+        then
+            menu="dmenu ${*//--clear/}"
+        else
+            menu="dmenu $*"
+        fi
     fi
     selection=$(echo "${entries[@]}" | sort -u | ${menu//~prompt~/$prompt1})
     execute "$selection" "$*"
