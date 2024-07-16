@@ -11,7 +11,7 @@ l7-dmenu-desktop:
 - to include regular binaries from PATH add "addpath=1" to ~/.config/l7-dmenu-desktop/config
 - to change menu that is used use --dmenu=\<menu\>
     - if using dmenu (not --dmenu=), arguments will be passed to it
-- instead of your desired prompt write \~prompt\~ without ' or "
+- instead of your desired prompt write \~prompt\~ without quotation marks
 - to change the default prompts add variables to ~/.config/l7-dmenu-desktop/config:
     * prompt1=\<first prompt (the one you see on launch)\>
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>

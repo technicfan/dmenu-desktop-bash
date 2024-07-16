@@ -212,8 +212,9 @@ main()
         case $arg in
         -h|--help)
             printf '%s\n' "Use --dmenu=<menu> to change menu command" \
+                "Use --clear to clear cache and rebuild it" \
                 "When not using --dmenu= flag arguments are passed to regular dmenu"\
-                    "instead of your desired prompt write ~prompt~ without \' or \""
+                    "instead of your desired prompt write ~prompt~ without quotation marks"
             exit 0
             ;;
         --dmenu=*)
