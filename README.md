@@ -5,7 +5,8 @@ l7-dmenu-desktop:
     - will build cache on first run (takes about one second on my system with 450 .desktop files)
     - after initial caching will update on change (faster)
 - includes aliases from ~/.config/l7-dmenu-desktop/aliases
-    - syntax: alias \<name\>=\<command\>
+    - syntax: alias \<name\>=\<command/name\>
+    - if you want to point the alias to an app from a desktop file add "; desktop" after the name
 - removes entries specified in ~/.config/l7-dmenu-desktop/excludes
     - write one exclude per line
 - to include regular binaries from PATH add "addpath=1" to ~/.config/l7-dmenu-desktop/config
@@ -20,6 +21,7 @@ l7-dmenu-desktop:
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config
+- to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
 
 **Important**
 - dependencies (that where not installed on my ArcoLinux system):
@@ -27,4 +29,3 @@ l7-dmenu-desktop:
     - dex
     - parallel
     - awk
-- if you want to use less or more than 12 cores change it manually in line 58
