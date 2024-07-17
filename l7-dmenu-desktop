@@ -219,6 +219,9 @@ do
         [[ -f "$appcache" ]] && rm "$appcache"
         c=1
         ;;
+    --benchmark)
+        b=1
+        ;;
     esac
 done
 
@@ -240,10 +243,9 @@ then
 fi
 echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
-echo "Read $(wc -l < "$appcache") .desktop files, \
-      found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
+echo "Read $(wc -l < "$appcache") .desktop files, found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
 # configure menu command to use if not already set
-if [[ -z "$menu" ]]
+if [[ -z "$menu" && $b != 1 ]]
 then
     if [[ $c = 1 ]]
     then
@@ -254,6 +256,9 @@ then
     else
         menu="dmenu $*"
     fi
+elif [[ $b = 1 ]]
+then
+    menu=""
 fi
 # print apps/programs in menu system and execute selection
 selection=$(sed '/^$/d' <(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \

@@ -22,6 +22,7 @@ l7-dmenu-desktop:
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config
 - to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
+- use --benchmark to leave the menu command empty (eg. to measure the time)
 
 **Important**
 - dependencies (that where not installed on my ArcoLinux system):
