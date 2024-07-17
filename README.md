@@ -17,7 +17,7 @@ l7-dmenu-desktop:
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>
         - use \~command\~ to insert the command that is asked to be run
 - write ~\<command\> into the menu to directly run it in bash
-- to clear the cache use --clear
+- to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config
 
