@@ -292,7 +292,8 @@ then
 fi
 echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
-[[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files, found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
+[[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
+                                "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
 # configure menu command to use if not already set with the existing info collected before
 if [[ -z "$menu" && $b != 1 ]]
 then
