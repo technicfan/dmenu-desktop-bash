@@ -125,7 +125,7 @@ execute()
     # because I didn't find a good solution to do this and it's fun;)
     # while dex is the best one I found it has some bugs which make it not work
     # with some apps on my system
-    custom_execute_desktop()
+    execute_desktop()
     {
         # get exec
         entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
@@ -152,7 +152,7 @@ execute()
         fi
     }
     # check if input is in cache and if true execute it with custom function or dex
-    execute_desktop()
+    run_app()
     {
         # check if input is in cache -> exists
         if [[ -f "$2" ]] && grep -q "^$1;" "$2"
@@ -163,7 +163,7 @@ execute()
             then
                 dex --term "$3" "$file" &
             else
-                custom_execute_desktop "$file" "$3" &
+                execute_desktop "$file" "$3" &
             fi
             return
         else
@@ -180,7 +180,7 @@ execute()
             # check if it references a desktop entry
             if [[ "$target" = *"; desktop" ]]
             then
-                execute_desktop "${target//; desktop/}" "$3" "$5" "$7" || \
+                run_app "${target//; desktop/}" "$3" "$5" "$7" || \
                                  notify-send -a "l7-dmenu-desktop_error" "Invalid desktop alias"
                 return
             else
@@ -189,7 +189,7 @@ execute()
             fi
         # try desktop file
         else
-            execute_desktop "$1" "$3" "$5" "$7" && return
+            run_app "$1" "$3" "$5" "$7" && return
         fi
         # prevent confirmation if addpath=1
         if [[ $6 = 1 ]]
