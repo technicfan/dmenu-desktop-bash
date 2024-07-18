@@ -1,6 +1,5 @@
 l7-dmenu-desktop:
-- put scripts in your PATH
-- looks for .desktop files in ~/.local/share/applications/; /usr/share/;
+- looks for .desktop files in ~/.local/share/applications/; /usr/share/applications/;
   /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
     - will build cache on first run (takes about one second on my system with 450 .desktop files)
     - after initial caching will update on change (faster)
@@ -17,16 +16,17 @@ l7-dmenu-desktop:
     * prompt1=\<first prompt (the one you see on launch)\>
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>
         - use \~command\~ to insert the command that is asked to be run
-- write ~\<command\> into the menu to directly run it in bash
+- write ~\<command\> into the menu to directly run it with bash
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config
 - to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
 - use --benchmark to leave the menu command empty (eg. to measure the time)
+- to use dex instead of custom function add "usedex=1" to ~/.config/l7-dmenu-desktop/config
 
 **Important**
 - dependencies (that where not installed on my ArcoLinux system):
-    - dmenu (or other similar menu)
-    - dex
+    - dmenu (or other similar menu; required for binaries from path (dmenu_path/stest))
+    - dex (only if you don't want to use the custom function)
     - parallel
     - awk

@@ -57,7 +57,7 @@ get_apps()
             [[ -f "$1" ]] && cached_files=$(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
             # check if cache need to be build completely
             # use parallel to make it way faster
-            if [[ -z "$cached_files" ]]
+            if [[ -z "$cached_files" && -n "$files" ]]
             then
                 export -f get_details
                 parallel -j12 get_details ::: "$files" ::: "$3" >> "$1"
@@ -121,16 +121,54 @@ get_aliases()
 # excute the selected item
 execute()
 {
-    # check if input is in cache and if true execute it with dex
+    # execute a desktop file by extracting infos manually,
+    # because I didn't find a good solution to do this and it's fun;)
+    # while dex is the best one I found it has some bugs which make it not work
+    # with some apps on my system
+    custom_execute_desktop()
+    {
+        # get exec
+        entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+        command=$(grep "^Exec=" <<< "$entry" | sed "s/^Exec=//g; s/%. //g; s/%.$//g")
+        # check if exec found
+        if [[ -n "$command" ]]
+        then
+            # check if path specified
+            if grep -q "^Path=.*" <<< "$entry"
+            then
+                path=$(grep "^Path=" <<< "$entry" | sed 's/^Path=//g')
+                command="pushd '$path' && $command"
+            fi
+            # check if it should be run in terminal
+            if grep -q "^Terminal=true" <<< "$entry"
+            then
+                command="$2 -e ${SHELL:-"/bin/sh"} -c \"$command\""
+            fi
+            # execute the resulting command
+            printf '%b' "$command" | ${SHELL:-"/bin/sh"}
+        # send error
+        else
+            notify-send "Invalid desktop file"
+        fi
+    }
+    # check if input is in cache and if true execute it with custom function or dex
     execute_desktop()
     {
-            if [[ -f "$2" ]] && grep -q "^$1;" "$2"
+        # check if input is in cache -> exists
+        if [[ -f "$2" ]] && grep -q "^$1;" "$2"
+        then
+            file="$(grep "^$1;" "$2" | awk -F "; " '{print $2}')"
+            # check if using dex or custom function
+            if [[ $4 = 1 ]]
             then
-                dex --term "$3" "$(grep "^$1;" "$2" | awk -F "; " '{print $2}')" &
-                return
+                dex --term "$3" "$file" &
             else
-                return 1
+                custom_execute_desktop "$file" "$3" &
             fi
+            return
+        else
+            return 1
+        fi
     }
 
     if [[ -n $1 ]]
@@ -139,9 +177,10 @@ execute()
         if [[ -f "$3" ]] && grep -q "^alias $1=" "$4"
         then
             target=$(grep "^alias $1=" "$4" | sed "s/alias $1=//g")
+            # check if it references a desktop entry
             if [[ "$target" = *"; desktop" ]]
             then
-                execute_desktop "${target//; desktop/}" "$3" "$5" || \
+                execute_desktop "${target//; desktop/}" "$3" "$5" "$7" || \
                                  notify-send -a "l7-dmenu-desktop_error" "Invalid desktop alias"
                 return
             else
@@ -150,7 +189,7 @@ execute()
             fi
         # try desktop file
         else
-            execute_desktop "$1" "$3" "$5" && return
+            execute_desktop "$1" "$3" "$5" "$7" && return
         fi
         # prevent confirmation if addpath=1
         if [[ $6 = 1 ]]
@@ -179,14 +218,15 @@ execute()
             then
                 $command
             fi
+        # send error and restart the script
         else
             notify-send -a "l7-dmenu-desktop_error" "Invalid command"
-            $0 "$7"
+            $0 "$8"
         fi
     fi
 }
 
-# remove excluded items from list
+# remove excluded (excludefile) items from list
 exclude()
 {
     list="$2"
@@ -200,10 +240,12 @@ exclude()
     echo "$list"
 }
 
+checkrunning "$lockfile"
 # check the arguments
 for arg in "$@"
 do
     case $arg in
+    # print help and exit
     -h|--help)
         printf '%s\n' "Use --dmenu=<menu> to change menu command" \
             "Use --clean to clear cache and rebuild it" \
@@ -211,21 +253,23 @@ do
                 "instead of your desired prompt write ~prompt~ without quotation marks"
         exit 0
         ;;
+    # check if custom dmenu command given
     --dmenu=*)
         menu=${arg//--dmenu=/}
         ;;
+    # remove files from cachedir?
     --clean)
         [[ -f "$lockfile" ]] && rm "$lockfile"
         [[ -f "$appcache" ]] && rm "$appcache"
         c=1
         ;;
+    # notify the script that no menu command should be used?
     --benchmark)
         b=1
         ;;
     esac
 done
 
-checkrunning "$lockfile"
 # load variables from config file
 [[ -f "$configfile" ]] && source "$configfile"
 [[ -z "$prompt1" ]] && prompt1="Run:"
@@ -239,12 +283,17 @@ then
 fi
 if [[ $addpath = 1 ]]
 then
-    entries+=$(echo && dmenu_path)
+    if command -v "dmenu_path"
+    then
+        entries+=$(echo && dmenu_path)
+    else
+        notify-send "Install dmenu to add items from PATH"
+    fi
 fi
 echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
-echo "Read $(wc -l < "$appcache") .desktop files, found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
-# configure menu command to use if not already set
+[[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files, found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
+# configure menu command to use if not already set with the existing info collected before
 if [[ -z "$menu" && $b != 1 ]]
 then
     if [[ $c = 1 ]]
@@ -256,6 +305,7 @@ then
     else
         menu="dmenu $*"
     fi
+# don't need a menu command?
 elif [[ $b = 1 ]]
 then
     menu=""
@@ -263,4 +313,4 @@ fi
 # print apps/programs in menu system and execute selection
 selection=$(sed '/^$/d' <(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
             sort -u | ${menu//~prompt~/$prompt1})
-execute "$selection" "$entries" "$appcache" "$aliasesfile" "$term" "$addpath" "$*"
+execute "$selection" "$entries" "$appcache" "$aliasesfile" "$term" "$addpath" "$usedex" "$*"
