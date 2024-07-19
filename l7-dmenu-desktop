@@ -27,6 +27,12 @@ checkrunning()
     fi
 }
 
+# only send notification when command available
+notify()
+{
+    command -v "notify-send" && notify-send -a "l7-dmenu-desktop" "$1"
+}
+
 # list app names found in desktopdirs and build cache with details
 get_apps()
 {
@@ -77,7 +83,7 @@ get_apps()
                         name="$(grep "$file; 1" "$1" | sed 's/;.*//g; s/ (.[0-9])$//g')"
                         sed -i "\|; $file; |d" "$1"
                         # also remove all numbered versions to prevent missing numbers
-                        sed -i "s/^$name (.[0-9])/$name/g" "$1"
+                        sed -i "s/^$name (.[0-9]); /$name; /g" "$1"
                     fi
                 done
             fi
@@ -148,7 +154,7 @@ execute()
             printf '%b' "$command" | ${SHELL:-"/bin/sh"}
         # send error
         else
-            notify-send "Invalid desktop file"
+            notify "Invalid desktop file"
         fi
     }
     # check if input is in cache and if true execute it with custom function or dex
@@ -159,7 +165,7 @@ execute()
         then
             file="$(grep "^$1;" "$2" | awk -F "; " '{print $2}')"
             # check if using dex or custom function
-            if [[ $4 = 1 ]]
+            if [[ $4 = 1 ]] && command -v "dex"
             then
                 dex --term "$3" "$file" &
             else
@@ -181,10 +187,10 @@ execute()
             if [[ "$target" = *"; desktop" ]]
             then
                 run_app "${target//; desktop/}" "$3" "$5" "$7" || \
-                                 notify-send -a "l7-dmenu-desktop_error" "Invalid desktop alias"
+                                 notify "Invalid desktop alias"
                 return
             else
-                $target || notify-send -a "l7-dmenu-desktop_error" "Invalid alias"
+                $target || notify "Invalid alias"
                 return
             fi
         # try desktop file
@@ -198,7 +204,7 @@ execute()
             do
                 if [[ "$1" = "$entry" ]]
                 then
-                    $1
+                    $1 &
                     return
                 fi
             done
@@ -214,14 +220,14 @@ execute()
         if command -v "$(echo "$command" | awk '{print $1}')"
         then
             if [[ $(printf "No\nYes" | \
-                    eval "${menu//~prompt~/\'${prompt2//~command~/\"$command\"}\'}") = "Yes" ]]
+                    eval "${menu//~prompt~/\'${8//~command~/\"$command\"}\'}") = "Yes" ]]
             then
-                $command
+                $command &
             fi
         # send error and restart the script
         else
-            notify-send -a "l7-dmenu-desktop_error" "Invalid command"
-            $0 "$8"
+            notify "Invalid command"
+            $0 "$9" &
         fi
     fi
 }
@@ -272,9 +278,6 @@ done
 
 # load variables from config file
 [[ -f "$configfile" ]] && source "$configfile"
-[[ -z "$prompt1" ]] && prompt1="Run:"
-[[ -z "$prompt2" ]] && prompt2="Run ~command~ with bash?"
-[[ -z "$term" ]] && term="alacritty"
 # load the list of programs according to the config
 echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
@@ -287,7 +290,7 @@ then
     then
         entries+=$(echo && dmenu_path)
     else
-        notify-send "Install dmenu to add items from PATH"
+        notify "Install dmenu to add items from PATH"
     fi
 fi
 echo -ne "\r\033[K"
@@ -313,5 +316,6 @@ then
 fi
 # print apps/programs in menu system and execute selection
 selection=$(sed '/^$/d' <(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
-            sort -u | ${menu//~prompt~/$prompt1})
-execute "$selection" "$entries" "$appcache" "$aliasesfile" "$term" "$addpath" "$usedex" "$*"
+            sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
+execute "$selection" "$entries" "$appcache" "$aliasesfile" \
+        "${term:-"alacritty"}" "$addpath" "$usedex" "${prompt2:-"Run ~command~ with bash?"}" "$*"
