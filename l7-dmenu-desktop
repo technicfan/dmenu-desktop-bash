@@ -61,7 +61,8 @@ get_apps()
         then
             # init variables that are needed for both ways
             readarray -t files < <(find "$2" -type f,l -name "*.desktop" | sort -u)
-            [[ -f "$1" ]] && readarray -t cached_files < <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
+            [[ -f "$1" ]] && readarray -t cached_files < \
+                             <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
             # check if cache need to be build completely
             if [[ -z "${cached_files[*]}" && -n "${files[*]}" ]]
             then
@@ -81,8 +82,8 @@ get_apps()
             # check if there were any changes after last cache time
             elif [[ "${cached_files[*]}" != "${files[*]}" ]]
             then
-                notify "noob"
-                readarray -t changes < <(diff <(printf '\n%s' "${cached_files[@]}") <(printf '\n%s' "${files[@]}"))
+                readarray -t changes < <(diff <(printf '\n%s' "${cached_files[@]}") \
+                                              <(printf '\n%s' "${files[@]}"))
                 # for every found change either add or remove the entry from cache
                 for change in "${changes[@]}"
                 do
@@ -126,7 +127,7 @@ get_apps()
     do
         wait "$pid"
     done
-    # check for duplicates and number them to prevent missing entries if statusfile exists
+    # check for duplicates and number them to prevent missing entries if cache changed
     [[ -f "$4" ]] && awk -i inplace -F "; " '
     {
         count[$1]++
@@ -168,15 +169,15 @@ execute()
             if grep -q "^Path=.*" <<< "$entry"
             then
                 path=$(grep "^Path=" <<< "$entry" | sed 's/^Path=//g')
-                command="pushd '$path' && $command"
+                command="cd '$path' && $command"
             fi
             # check if it should be run in terminal
             if grep -q "^Terminal=true" <<< "$entry"
             then
-                command="$2 -e ${SHELL:-"/bin/sh"} -c \"$command\""
+                command="$2 -e ${SHELL:-"/bin/bash"} -c \"$command\""
             fi
             # execute the resulting command
-            printf '%b' "$command" | ${SHELL:-"/bin/sh"}
+            printf '%b' "$command" | ${SHELL:-"/bin/bash"}
         # send error
         else
             notify "Invalid desktop file"
@@ -266,7 +267,11 @@ exclude()
     echo "$list"
 }
 
+######################################### MAIN PART #########################################
+
 checkrunning "$lockfile"
+# load variables from config file
+[[ -f "$configfile" ]] && source "$configfile"
 # check the arguments
 for arg in "$@"
 do
@@ -276,12 +281,13 @@ do
         printf '%s\n' "Use --dmenu=<menu> to change menu command" \
             "Use --clean to clear cache and rebuild it" \
             "When not using --dmenu= flag arguments are passed to regular dmenu"\
-                "instead of your desired prompt write ~prompt~ without quotation marks"
+                "Instead of your desired prompt write ~prompt~ without quotation marks"
         exit 0
         ;;
     # check if custom dmenu command given
     --dmenu=*)
         menu=${arg//--dmenu=/}
+        m=1
         ;;
     # remove files from cachedir?
     --clean)
@@ -295,20 +301,42 @@ do
         ;;
     esac
 done
-
-# load variables from config file
-[[ -f "$configfile" ]] && source "$configfile"
+# configure menu command to use if not already set with the existing info collected before
+if [[ $m != 1 && $b != 1 ]]
+then
+    menu="${menu:-"dmenu"} ${*//--clean/}"
+    if [[ "$menu" != ".*-p .*~prompt~.*" ]]
+    then
+        menu="$menu -p ~prompt~"
+    fi
+# don't need a menu command?
+elif [[ $b = 1 ]]
+then
+    menu=""
+fi
+# check if menu command is available
+if [[ -n "$menu" ]] && ! command -v "$(awk '{print $1}' <<< "$menu")"
+then
+    notify "No valid menu command specified"
+    exit 1
+fi
 # load the list of programs according to the config
 echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
-    entries=$(get_apps "${desktopdirs[*]}" "$appcache" "$lockfile" "$statusfile" "$lang" 2>/dev/null)
+    entries=$(get_apps "${desktopdirs[*]}" "$appcache" \
+              "$lockfile" "$statusfile" "$lang" 2>/dev/null)
 fi
 if [[ $addpath = 1 ]]
 then
     if command -v "dmenu_path"
     then
-        entries+=$(echo && dmenu_path)
+        if [[ -n "$entries" ]]
+        then
+            entries+=$(echo && dmenu_path)
+        else
+            entries+=$(dmenu_path)
+        fi
     else
         notify "Install dmenu to add items from PATH"
     fi
@@ -317,25 +345,8 @@ echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
 [[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
                                 "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
-# configure menu command to use if not already set with the existing info collected before
-if [[ -z "$menu" && $b != 1 ]]
-then
-    if [[ $c = 1 ]]
-    then
-        menu="dmenu ${*//--clean/}"
-    elif [[ "$*" != ".*-p .*" ]]
-    then
-        menu="dmenu $* -p ~prompt~"
-    else
-        menu="dmenu $*"
-    fi
-# don't need a menu command?
-elif [[ $b = 1 ]]
-then
-    menu=""
-fi
 # print apps/programs in menu system and execute selection
-selection=$(sed '/^$/d' <(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
+selection=$(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries" | \
             sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
 execute "$selection" "$entries" "$appcache" "$aliasesfile" \
         "${term:-"alacritty"}" "$addpath" "${prompt2:-"Run ~command~ with bash?"}" "$*"

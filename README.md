@@ -10,7 +10,7 @@ l7-dmenu-desktop:
     - write one exclude per line
 - to include regular binaries from PATH add "addpath=1" to ~/.config/l7-dmenu-desktop/config
 - to change menu that is used use --dmenu=\<menu\>
-    - if using dmenu (not --dmenu=), arguments will be passed to it
+    - if using default menu (not --dmenu=), arguments will be passed to it
 - instead of your desired prompt write \~prompt\~ without quotation marks
 - to change the default prompts add variables to ~/.config/l7-dmenu-desktop/config:
     * prompt1=\<first prompt (the one you see on launch)\>
@@ -22,9 +22,23 @@ l7-dmenu-desktop:
   to ~/.config/l7-dmenu-desktop/config
 - to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
 - use --benchmark to leave the menu command empty (eg. to measure the time)
-- to use dex instead of custom function add "usedex=1" to ~/.config/l7-dmenu-desktop/config
+- to change the default menu command "menu=\<menu\>" without arguments to ~/.config/l7-dmenu-desktop/config
 
 **Important**
-- dependencies (that where not installed on my ArcoLinux system):
-    - dmenu (or other similar menu; required for binaries from path (dmenu_path/stest))
-    - dex (only if you don't want to use the custom function)
+- commands that need to be available:
+    - dmenu (if no other similar menu specified)
+    - alacritty (if no other terminal emulator specified)
+    - dmenu_path & stest (required for binaries from path (dmenu_path/stest)
+    - notify-send (optional for notifications)
+    - bash :)
+    - echo
+    - sed
+    - grep
+    - awk
+    - find
+    - sort
+    - printf
+    - touch
+    - rm
+    - diff
+    - wc
