@@ -177,7 +177,7 @@ execute()
                 command="$2 -e ${SHELL:-"/bin/bash"} -c \"$command\""
             fi
             # execute the resulting command
-            printf '%b' "$command" | ${SHELL:-"/bin/bash"}
+            eval "$(printf '%b' "$command")" & # first execution location (.desktop file)
         # send error
         else
             notify "Invalid desktop file"
@@ -191,7 +191,7 @@ execute()
         then
             # get and execute .desktop file
             file="$(grep "^$1;" "$2" | awk -F "; " '{print $2}')"
-            execute_desktop "$file" "$3" &
+            execute_desktop "$file" "$3"
             return
         else
             return 1
@@ -207,15 +207,13 @@ execute()
         then
             run_app "${target//; desktop/}" "$3" "$5" "$7" || \
                                 notify "Invalid desktop alias"
-            return
         elif command -v "$(awk '{print $1}' <<< "$target")"
         then
-            $target
-            return
+            $target & # second execution location (alias)
         else
             notify "Invalid alias"
-            return
         fi
+        return
     # try desktop file
     else
         run_app "$1" "$3" "$5" "$7" && return
@@ -227,7 +225,7 @@ execute()
         do
             if [[ "$1" = "$entry" ]]
             then
-                $1 &
+                $1 & # third execution location (command from path (with addpath=1))
                 return
             fi
         done
@@ -245,12 +243,12 @@ execute()
         if [[ $(printf "No\nYes" | \
                 eval "${menu//~prompt~/\'${7//~command~/\"$command\"}\'}") = "Yes" ]]
         then
-            $command &
+            $command & # fourth execution location (regular command)
         fi
     # send error and restart the script
     else
         notify "Invalid command"
-        $0 "$8" &
+        $0 "$8" & # self execution
     fi
 }
 
