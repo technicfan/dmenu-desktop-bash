@@ -31,7 +31,7 @@ checkrunning()
 # only send notification when command available
 notify()
 {
-    command -v "notify-send" && notify-send -a "l7-dmenu-desktop" "$1"
+    command -v "notify-send" 1>/dev/null && notify-send -a "l7-dmenu-desktop" "$1"
 }
 
 # list app names found in desktopdirs and build cache with details
@@ -198,58 +198,59 @@ execute()
         fi
     }
 
-    if [[ -n $1 ]]
+    # check if input is an alias and if run execute it
+    if [[ -f "$3" ]] && grep -q "^alias $1=" "$4"
     then
-        # check if input is an alias and if run execute it
-        if [[ -f "$3" ]] && grep -q "^alias $1=" "$4"
+        target=$(grep "^alias $1=" "$4" | sed "s/alias $1=//g")
+        # check if it references a desktop entry
+        if [[ "$target" = *"; desktop" ]]
         then
-            target=$(grep "^alias $1=" "$4" | sed "s/alias $1=//g")
-            # check if it references a desktop entry
-            if [[ "$target" = *"; desktop" ]]
+            run_app "${target//; desktop/}" "$3" "$5" "$7" || \
+                                notify "Invalid desktop alias"
+            return
+        elif command -v "$(awk '{print $1}' <<< "$target")"
+        then
+            $target
+            return
+        else
+            notify "Invalid alias"
+            return
+        fi
+    # try desktop file
+    else
+        run_app "$1" "$3" "$5" "$7" && return
+    fi
+    # prevent confirmation if addpath=1
+    if [[ $6 = 1 ]]
+    then
+        for entry in $2
+        do
+            if [[ "$1" = "$entry" ]]
             then
-                run_app "${target//; desktop/}" "$3" "$5" "$7" || \
-                                 notify "Invalid desktop alias"
-                return
-            else
-                $target || notify "Invalid alias"
+                $1 &
                 return
             fi
-        # try desktop file
-        else
-            run_app "$1" "$3" "$5" "$7" && return
-        fi
-        # prevent confirmation if addpath=1
-        if [[ $6 = 1 ]]
+        done
+    fi
+    # check if specified to run as command
+    if [[ $1 = $"~"* ]]
+    then
+        command="${1:1}"
+    else
+        command=$1
+    fi
+    # check if input is an available command, ask for confirmation and run it
+    if command -v "$(awk '{print $1}' <<< "$command")"
+    then
+        if [[ $(printf "No\nYes" | \
+                eval "${menu//~prompt~/\'${7//~command~/\"$command\"}\'}") = "Yes" ]]
         then
-            for entry in $2
-            do
-                if [[ "$1" = "$entry" ]]
-                then
-                    $1 &
-                    return
-                fi
-            done
+            $command &
         fi
-        # check if specified to run as command
-        if [[ $1 = $"~"* ]]
-        then
-            command="${1:1}"
-        else
-            command=$1
-        fi
-        # check if input is an available command, ask for confirmation and run it
-        if command -v "$(awk '{print $1}' <<< "$command")"
-        then
-            if [[ $(printf "No\nYes" | \
-                    eval "${menu//~prompt~/\'${7//~command~/\"$command\"}\'}") = "Yes" ]]
-            then
-                $command &
-            fi
-        # send error and restart the script
-        else
-            notify "Invalid command"
-            $0 "$8" &
-        fi
+    # send error and restart the script
+    else
+        notify "Invalid command"
+        $0 "$8" &
     fi
 }
 
@@ -293,7 +294,6 @@ do
     --clean)
         [[ -f "$lockfile" ]] && rm "$lockfile"
         [[ -f "$appcache" ]] && rm "$appcache"
-        c=1
         ;;
     # notify the script that no menu command should be used?
     --benchmark)
@@ -315,7 +315,7 @@ then
     menu=""
 fi
 # check if menu command is available
-if [[ -n "$menu" ]] && ! command -v "$(awk '{print $1}' <<< "$menu")"
+if [[ -n "$menu" ]] && ! command -v "$(awk '{print $1}' <<< "$menu")" 1>/dev/null
 then
     notify "No valid menu command specified"
     exit 1
@@ -329,7 +329,7 @@ then
 fi
 if [[ $addpath = 1 ]]
 then
-    if command -v "dmenu_path"
+    if command -v "dmenu_path" 1>/dev/null
     then
         if [[ -n "$entries" ]]
         then
@@ -345,8 +345,12 @@ echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
 [[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
                                 "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
-# print apps/programs in menu system and execute selection
-selection=$(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries" | \
+# print apps/programs in menu system and get selection
+selection=$( (get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
             sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
-execute "$selection" "$entries" "$appcache" "$aliasesfile" \
+# if anything selected, execute it
+if [[ -n "$selection" ]] 
+then
+    execute "$selection" "$entries" "$appcache" "$aliasesfile" \
         "${term:-"alacritty"}" "$addpath" "${prompt2:-"Run ~command~ with bash?"}" "$*"
+fi
