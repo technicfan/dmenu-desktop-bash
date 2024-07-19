@@ -4,10 +4,11 @@ cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
 appcache="$cachedir/apps"
+statusfile="$cachedir/changed"
 aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
 configfile="$configdir/config"
-lang=$(echo "$LANG" | awk -F "_" '{print $1}')
+lang=$(awk -F "_" '{print $1}' <<< "$LANG")
 desktopdirs=(
     "/usr/share/applications"
     "/usr/local/share/applications"
@@ -59,32 +60,56 @@ get_apps()
         if [[ -d "$2" ]]
         then
             # init variables that are needed for both ways
-            files=$(find "$2" -type f,l -name "*.desktop" | sort -u)
-            [[ -f "$1" ]] && cached_files=$(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
+            readarray -t files < <(find "$2" -type f,l -name "*.desktop" | sort -u)
+            [[ -f "$1" ]] && readarray -t cached_files < <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
             # check if cache need to be build completely
-            # use parallel to make it way faster
-            if [[ -z "$cached_files" && -n "$files" ]]
+            if [[ -z "${cached_files[*]}" && -n "${files[*]}" ]]
             then
-                export -f get_details
-                parallel -j12 get_details ::: "$files" ::: "$3" >> "$1"
+                #export -f get_details
+                #parallel -j12 get_details ::: "${files[@]}" ::: "$3" >> "$1"
+                for file in "${files[@]}"
+                do
+                    get_details "$file" "$3" >> "$1" &
+                    pids+=($!)
+                done
+                for pid in "${pids[@]}"
+                do
+                    wait "$pid"
+                done
+                # create file to signify change
+                touch "$4"
             # check if there were any changes after last cache time
-            elif [[ "$cached_files" != "$files" ]]
+            elif [[ "${cached_files[*]}" != "${files[*]}" ]]
             then
-                readarray -t changes < <(diff <(echo "$cached_files") <(echo "$files"))
+                notify "noob"
+                readarray -t changes < <(diff <(printf '\n%s' "${cached_files[@]}") <(printf '\n%s' "${files[@]}"))
                 # for every found change either add or remove the entry from cache
                 for change in "${changes[@]}"
                 do
                     if [[ "$change" = ">"* ]]
                     then
-                        get_details "${change//> /}" "$3" >> "$1"
+                        file=${change//> /}
+                        get_details "$file" "$3" >> "$1"
+                        name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
+                        # remove all numbered versions to prevent dulicate numbers
+                        sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                        # same file as above
+                        ! [[ -f "$4" ]] && touch "$4"
                     elif [[ "$change" = "<"* ]]
                     then
                         file=${change//< /}
-                        name="$(grep "$file; 1" "$1" | sed 's/;.*//g; s/ (.[0-9])$//g')"
+                        name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
                         sed -i "\|; $file; |d" "$1"
                         # also remove all numbered versions to prevent missing numbers
-                        sed -i "s/^$name (.[0-9]); /$name; /g" "$1"
+                        sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                        # same file as above
+                        ! [[ -f "$4" ]] && touch "$4"
                     fi
+                    pids+=($!)
+                done
+                for pid in "${pids[@]}"
+                do
+                    wait "$pid"
                 done
             fi
         fi
@@ -94,15 +119,15 @@ get_apps()
     # run the functions in parallel
     for desktopdir in $1
     do
-        update_cache "$2" "$desktopdir" "$4" &
+        update_cache "$2" "$desktopdir" "$5" "$4" &
         pids+=($!)
     done
     for pid in "${pids[@]}"
     do
         wait "$pid"
     done
-    # check for duplicates and number them to prevent missing entries
-    awk -i inplace -F "; " '
+    # check for duplicates and number them to prevent missing entries if statusfile exists
+    [[ -f "$4" ]] && awk -i inplace -F "; " '
     {
         count[$1]++
         if (count[$1] == 1 || $1 == "hidden") {
@@ -111,7 +136,7 @@ get_apps()
             print $1 " (" count[$1]-1 "); " $2 "; " $3
         }
     }
-    ' "$2"
+    ' "$2" && rm "$4"
     # print resulting app list
     grep "; 1$" "$2" | sed 's/;.*$//g'
     # remove lockfile
@@ -163,14 +188,9 @@ execute()
         # check if input is in cache -> exists
         if [[ -f "$2" ]] && grep -q "^$1;" "$2"
         then
+            # get and execute .desktop file
             file="$(grep "^$1;" "$2" | awk -F "; " '{print $2}')"
-            # check if using dex or custom function
-            if [[ $4 = 1 ]] && command -v "dex"
-            then
-                dex --term "$3" "$file" &
-            else
-                execute_desktop "$file" "$3" &
-            fi
+            execute_desktop "$file" "$3" &
             return
         else
             return 1
@@ -217,17 +237,17 @@ execute()
             command=$1
         fi
         # check if input is an available command, ask for confirmation and run it
-        if command -v "$(echo "$command" | awk '{print $1}')"
+        if command -v "$(awk '{print $1}' <<< "$command")"
         then
             if [[ $(printf "No\nYes" | \
-                    eval "${menu//~prompt~/\'${8//~command~/\"$command\"}\'}") = "Yes" ]]
+                    eval "${menu//~prompt~/\'${7//~command~/\"$command\"}\'}") = "Yes" ]]
             then
                 $command &
             fi
         # send error and restart the script
         else
             notify "Invalid command"
-            $0 "$9" &
+            $0 "$8" &
         fi
     fi
 }
@@ -282,7 +302,7 @@ done
 echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
-    entries=$(get_apps "${desktopdirs[*]}" "$appcache" "$lockfile" "$lang" 2>/dev/null)
+    entries=$(get_apps "${desktopdirs[*]}" "$appcache" "$lockfile" "$statusfile" "$lang" 2>/dev/null)
 fi
 if [[ $addpath = 1 ]]
 then
@@ -318,4 +338,4 @@ fi
 selection=$(sed '/^$/d' <(get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
             sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
 execute "$selection" "$entries" "$appcache" "$aliasesfile" \
-        "${term:-"alacritty"}" "$addpath" "$usedex" "${prompt2:-"Run ~command~ with bash?"}" "$*"
+        "${term:-"alacritty"}" "$addpath" "${prompt2:-"Run ~command~ with bash?"}" "$*"

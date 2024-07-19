@@ -28,5 +28,3 @@ l7-dmenu-desktop:
 - dependencies (that where not installed on my ArcoLinux system):
     - dmenu (or other similar menu; required for binaries from path (dmenu_path/stest))
     - dex (only if you don't want to use the custom function)
-    - parallel
-    - awk
