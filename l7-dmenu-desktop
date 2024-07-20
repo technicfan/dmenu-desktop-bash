@@ -59,15 +59,12 @@ get_apps()
     {
         if [[ -d "$2" ]]
         then
-            # init variables that are needed for both ways
-            readarray -t files < <(find "$2" -type f,l -name "*.desktop" | sort -u)
-            [[ -f "$1" ]] && readarray -t cached_files < \
-                             <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u)
-            # check if cache need to be build completely
-            if [[ -z "${cached_files[*]}" && -n "${files[*]}" ]]
+            # check if cache exists
+            if ! [[ -f "$1" ]]
             then
                 #export -f get_details
                 #parallel -j12 get_details ::: "${files[@]}" ::: "$3" >> "$1"
+                readarray -t files < <(find "$2" -type f,l -name "*.desktop")
                 for file in "${files[@]}"
                 do
                     get_details "$file" "$3" >> "$1" &
@@ -80,16 +77,18 @@ get_apps()
                 # create file to signify change
                 touch "$4"
             # check if there were any changes after last cache time
-            elif [[ "${cached_files[*]}" != "${files[*]}" ]]
+            elif IFS=: && find "$2" -type d | sed 's/ \//:\//g' | stest -dqr -n "$1"
             then
-                readarray -t changes < <(diff <(printf '\n%s' "${cached_files[@]}") \
-                                              <(printf '\n%s' "${files[@]}"))
+                readarray -t changes < <(diff <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
+                                              <(find "$2" -type f,l -name "*.desktop" | sort -u) | \
+                                         grep -E "<|>")
                 # for every found change either add or remove the entry from cache
                 for change in "${changes[@]}"
                 do
                     if [[ "$change" = ">"* ]]
                     then
                         file=${change//> /}
+                        #sed -i "\|; $file; |d" "$1"
                         get_details "$file" "$3" >> "$1"
                         name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
                         # remove all numbered versions to prevent dulicate numbers
