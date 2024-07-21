@@ -11,7 +11,7 @@ aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
 configfile="$configdir/config"
 lang=$(awk -F "_" '{print $1}' <<< "$LANG")
-desktopdirs=(
+appdirs=(
     "/usr/share/applications"
     "/usr/local/share/applications"
     "$HOME/.local/share/applications"
@@ -36,7 +36,7 @@ notify()
     command -v "notify-send" 1>/dev/null && notify-send -a "l7-dmenu-desktop" "$1"
 }
 
-# list app names found in desktopdirs and build cache with details
+# list app names found in appdirs and build cache with details
 get_apps()
 {
     # get name of an app from its .desktop file and check if it should be displayed
@@ -92,7 +92,6 @@ get_apps()
                     empty=false
                 done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
                                   <(find "$2" -type f,l -name "*.desktop" | sort -u))
-                pid=$!
                 while read -r file
                 do
                     # remove previous entry if file only changed
@@ -111,10 +110,10 @@ get_apps()
     }
     # create lock file
     touch "$3"
-    # run the functions in parallel
-    for desktopdir in $1
+    # run the function in parallel
+    for dir in $1
     do
-        update_cache "$2" "$desktopdir" "$5" "$4" &
+        update_cache "$2" "$dir" "$5" "$4" &
         pids+=($!)
     done
     for pid in "${pids[@]}"
@@ -323,8 +322,8 @@ fi
 echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
-    entries=$(get_apps "${desktopdirs[*]}" "$appcache" \
-              "$lockfile" "$statusfile" "$lang" 2>/dev/null);
+    entries=$(get_apps "${appdirs[*]}" "$appcache" \
+              "$lockfile" "$statusfile" "$lang" 2>/dev/null)
 fi
 if [[ $addpath = 1 ]]
 then
@@ -346,7 +345,7 @@ echo -ne "\r\033[K"
                                 "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
 # print apps/programs in menu system and get selection
 selection=$( (get_aliases "$aliasesfile" "$aliasescache" & exclude "$excludefile" "$entries") | \
-            sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
+              sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
 then
