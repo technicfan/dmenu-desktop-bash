@@ -9,6 +9,7 @@ l7-dmenu-desktop:
 - removes entries specified in ~/.config/l7-dmenu-desktop/excludes
     - write one exclude per line
 - to include regular binaries from PATH add "addpath=1" to ~/.config/l7-dmenu-desktop/config
+  or use the flag --addpath
 - to change menu that is used use --dmenu=\<menu\>
     - if using default menu (not --dmenu=), arguments will be passed to it
 - instead of your desired prompt write \~prompt\~ without quotation marks
@@ -16,11 +17,13 @@ l7-dmenu-desktop:
     * prompt1=\<first prompt (the one you see on launch)\>
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>
         - use \~command\~ to insert the command that is asked to be run
+  or use flags --prompt1= and --prompt2=
 - write ~\<command\> into the menu to directly run it with bash
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config
 - to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
+  or use the flag --hidedesktop
 - use --benchmark to leave the menu command empty (eg. to measure the time)
 - to change the default menu command "menu=\<menu\>" without arguments to ~/.config/l7-dmenu-desktop/config
 
@@ -31,13 +34,11 @@ l7-dmenu-desktop:
     - alacritty (if no other terminal emulator specified)
     - notify-send (optional for notifications)
     - bash :)
-    - echo
     - sed
     - grep
     - awk
     - find
     - sort
-    - printf
     - cat
     - touch
     - rm
