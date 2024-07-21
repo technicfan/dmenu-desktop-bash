@@ -396,7 +396,8 @@ echo -ne "\r\033[K"
 [[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
                                 "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
 # print apps/programs in menu system and get selection
-selection=$( (get_aliases "$aliasesfile" "$aliasescache" & exclude "$excludefile" "$entries") | \
+selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
+              exclude "$excludefile" "$entries") | \
               sort -u | eval ${menu//~prompt~/\'${prompt1:-"Run:"}\'})
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
