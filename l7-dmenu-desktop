@@ -1,5 +1,29 @@
 #!/bin/bash
 
+##################################################################################
+# MIT License                                                                    #
+#                                                                                #
+# Copyright (c) 2024 Technicfan                                                  #
+#                                                                                #
+# Permission is hereby granted, free of charge, to any person obtaining a copy   #
+# of this software and associated documentation files (the "Software"), to deal  #
+# in the Software without restriction, including without limitation the rights   #
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell      #
+# copies of the Software, and to permit persons to whom the Software is          #
+# furnished to do so, subject to the following conditions:                       #
+#                                                                                #
+# The above copyright notice and this permission notice shall be included in all #
+# copies or substantial portions of the Software.                                #
+#                                                                                #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR     #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,       #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER         #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  #
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE  #
+# SOFTWARE.                                                                      #
+##################################################################################
+
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
@@ -285,8 +309,15 @@ do
     case $arg in
     # print help and exit
     -h|--help)
-        printf '%s\n' "Use --dmenu=<menu> to change menu command" \
-            "Use --clean to clear cache and rebuild it" \
+        printf '%s\n' "l7-dmenu-desktop by Technicfan" \
+            "licenced under MIT licence" \
+            "https://github.com/Technicfan/l7-dmenu-desktop" "" \
+            "--dmenu=<menu> - change menu command" \
+            "--clean - clear cache and rebuild it" \
+            "--benchmark - make menu command blank (eg. to test time)" \
+            "--addpath - add items from path like dmenu (dmenu_path required)" \
+            "--hidedesktop - disable .desktop files" \
+            "--prompt1=<prompt1>" "--prompt2=<prompt2> - change prompts" "" \
             "When not using --dmenu= flag arguments are passed to regular dmenu"\
                 "Instead of your desired prompt write ~prompt~ without quotation marks"
         exit 0

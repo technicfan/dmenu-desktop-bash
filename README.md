@@ -13,11 +13,11 @@ l7-dmenu-desktop:
 - to change menu that is used use --dmenu=\<menu\>
     - if using default menu (not --dmenu=), arguments will be passed to it
 - instead of your desired prompt write \~prompt\~ without quotation marks
-- to change the default prompts add variables to ~/.config/l7-dmenu-desktop/config:
+- to change the default prompts add variables to ~/.config/l7-dmenu-desktop/config 
+  or use flags --prompt1= and --prompt2=:
     * prompt1=\<first prompt (the one you see on launch)\>
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>
         - use \~command\~ to insert the command that is asked to be run
-  or use flags --prompt1= and --prompt2=
 - write ~\<command\> into the menu to directly run it with bash
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
