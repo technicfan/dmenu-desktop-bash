@@ -27,8 +27,7 @@ l7-dmenu-desktop:
 **Important**
 - commands that need to be available:
     - dmenu (if no other similar menu specified)
-        - stest (so just install dmenu!)
-        - dmenu_path (for path items)
+        - dmenu_path & stest (for path items)
     - alacritty (if no other terminal emulator specified)
     - notify-send (optional for notifications)
     - bash :)

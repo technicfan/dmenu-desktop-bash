@@ -77,8 +77,11 @@ get_apps()
                 # create file to signify change
                 touch "$4"
             # check if there were any changes after last cache time
-            elif IFS=: && find "$2" -type d | sed 's/ \//:\//g' | stest -dqr -n "$1"
+            #elif (IFS=: && stest -dqr -n $1 $(find "$2" -type d -printf '%p:'))
+            elif [[ -n $(find "$2" -newer "$1" -type d) ]]
             then
+                #notify "changes:"
+                #readarray -t changed_files < <(find "$2" -newer "$1" -type f,l -name "*.desktop" -printf '> %p')
                 readarray -t changes < <(diff <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
                                               <(find "$2" -type f,l -name "*.desktop" | sort -u) | \
                                          grep -E "<|>")
@@ -88,7 +91,6 @@ get_apps()
                     if [[ "$change" = ">"* ]]
                     then
                         file=${change//> /}
-                        #sed -i "\|; $file; |d" "$1"
                         get_details "$file" "$3" >> "$1"
                         name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
                         # remove all numbered versions to prevent dulicate numbers
@@ -105,12 +107,15 @@ get_apps()
                         # same file as above
                         ! [[ -f "$4" ]] && touch "$4"
                     fi
+                    #notify "$change"
+                    empty=false
                     pids+=($!)
                 done
                 for pid in "${pids[@]}"
                 do
                     wait "$pid"
                 done
+                $empty && sed -i '/^ *$/d' "$1"
             fi
         fi
     }
