@@ -38,7 +38,8 @@ l7-dmenu-desktop:
     - find
     - sort
     - printf
+    - cat
     - touch
     - rm
-    - diff
+    - comm
     - wc

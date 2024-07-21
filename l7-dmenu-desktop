@@ -4,6 +4,8 @@ cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
 appcache="$cachedir/apps"
+aliasescache="$cachedir/aliases"
+pathcache="$cachedir/path"
 statusfile="$cachedir/changed"
 aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
@@ -62,59 +64,47 @@ get_apps()
             # check if cache exists
             if ! [[ -f "$1" ]]
             then
+                #readarray -t files < <(find "$2" -type f,l -name "*.desktop")
                 #export -f get_details
                 #parallel -j12 get_details ::: "${files[@]}" ::: "$3" >> "$1"
-                readarray -t files < <(find "$2" -type f,l -name "*.desktop")
-                for file in "${files[@]}"
+                while read -r file
                 do
                     get_details "$file" "$3" >> "$1" &
                     pids+=($!)
-                done
+                done < <(find "$2" -type f,l -name "*.desktop")
                 for pid in "${pids[@]}"
                 do
                     wait "$pid"
                 done
                 # create file to signify change
-                touch "$4"
+                ! [[ -f "$4" ]] && touch "$4"
             # check if there were any changes after last cache time
-            #elif (IFS=: && stest -dqr -n $1 $(find "$2" -type d -printf '%p:'))
-            elif [[ -n $(find "$2" -newer "$1" -type d) ]]
+            elif [[ -n $(find "$2" -cnewer "$1" -type d,f,l) ]]
             then
-                #notify "changes:"
-                #readarray -t changed_files < <(find "$2" -newer "$1" -type f,l -name "*.desktop" -printf '> %p')
-                readarray -t changes < <(diff <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
-                                              <(find "$2" -type f,l -name "*.desktop" | sort -u) | \
-                                         grep -E "<|>")
-                # for every found change either add or remove the entry from cache
-                for change in "${changes[@]}"
+                while read -r file
                 do
-                    if [[ "$change" = ">"* ]]
-                    then
-                        file=${change//> /}
-                        get_details "$file" "$3" >> "$1"
-                        name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
-                        # remove all numbered versions to prevent dulicate numbers
-                        sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                        # same file as above
-                        ! [[ -f "$4" ]] && touch "$4"
-                    elif [[ "$change" = "<"* ]]
-                    then
-                        file=${change//< /}
-                        name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
-                        sed -i "\|; $file; |d" "$1"
-                        # also remove all numbered versions to prevent missing numbers
-                        sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                        # same file as above
-                        ! [[ -f "$4" ]] && touch "$4"
-                    fi
-                    #notify "$change"
+                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
+                    sed -i "\|; $file; |d" "$1"
+                    # also remove all numbered versions to prevent missing numbers
+                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    # same file as above
+                    ! [[ -f "$4" ]] && touch "$4"
                     empty=false
-                    pids+=($!)
-                done
-                for pid in "${pids[@]}"
+                done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
+                                  <(find "$2" -type f,l -name "*.desktop" | sort -u))
+                pid=$!
+                while read -r file
                 do
-                    wait "$pid"
-                done
+                    # remove previous entry if file only changed
+                    sed -i "\|; $file; |d" "$1"
+                    get_details "$file" "$3" >> "$1"
+                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
+                    # remove all numbered versions to prevent dulicate numbers
+                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    # same file as above
+                    ! [[ -f "$4" ]] && touch "$4"
+                    empty=false
+                done < <(find "$2" -cnewer "$1" -type f,l -name "*.desktop")
                 $empty && sed -i '/^ *$/d' "$1"
             fi
         fi
@@ -151,7 +141,14 @@ get_apps()
 # list the alias names from config file
 get_aliases()
 {
-    [[ -f "$1" ]] && grep "^alias .*=.*" "$1" | sed 's/alias //g; s/=.*$//g'
+    if [[ -f "$1" ]]
+    then
+        if [[ "$1" -nt "$2" ]] || [[ ! -f "$2" ]]
+        then
+            grep "^alias .*=.*" "$1" | sed 's/alias //g; s/=.*$//g' > "$2"
+        fi
+        cat "$2"
+    fi
 }
 
 # excute the selected item
@@ -327,7 +324,7 @@ echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
     entries=$(get_apps "${desktopdirs[*]}" "$appcache" \
-              "$lockfile" "$statusfile" "$lang" 2>/dev/null)
+              "$lockfile" "$statusfile" "$lang" 2>/dev/null);
 fi
 if [[ $addpath = 1 ]]
 then
@@ -348,7 +345,7 @@ echo -ne "\r\033[K"
 [[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
                                 "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
 # print apps/programs in menu system and get selection
-selection=$( (get_aliases "$aliasesfile" & exclude "$excludefile" "$entries") | \
+selection=$( (get_aliases "$aliasesfile" "$aliasescache" & exclude "$excludefile" "$entries") | \
             sort -u | ${menu//~prompt~/${prompt1:-"Run:"}})
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
