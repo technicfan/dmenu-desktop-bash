@@ -22,9 +22,10 @@ appdirs=(
 # check if desktop file caching is already running to prevent cache curruption
 checkrunning()
 {
-    [[ ! -e "$cachedir" ]] && mkdir "$cachedir"
-    if [[ -f "$1" ]]
+    [[ ! -e "$1" ]] && mkdir "$1"
+    if [[ -f "$2" ]]
     then
+        notify "Already running!"
         echo "Already running!" >&2
         exit 1
     fi
@@ -67,10 +68,12 @@ get_apps()
                 #readarray -t files < <(find "$2" -type f,l -name "*.desktop")
                 #export -f get_details
                 #parallel -j12 get_details ::: "${files[@]}" ::: "$3" >> "$1"
+                # add found files
                 while read -r file
                 do
                     get_details "$file" "$3" >> "$1" &
                     pids+=($!)
+                       # input .desktop files
                 done < <(find "$2" -type f,l -name "*.desktop")
                 for pid in "${pids[@]}"
                 do
@@ -81,6 +84,7 @@ get_apps()
             # check if there were any changes after last cache time
             elif [[ -n $(find "$2" -cnewer "$1" -type d,f,l) ]]
             then
+                # remove removed files from cache
                 while read -r file
                 do
                     name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
@@ -90,11 +94,13 @@ get_apps()
                     # same file as above
                     ! [[ -f "$4" ]] && touch "$4"
                     empty=false
+                       # input files that are only in cache and not in dir
                 done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
                                   <(find "$2" -type f,l -name "*.desktop" | sort -u))
+                # add/update new/changed files
                 while read -r file
                 do
-                    # remove previous entry if file only changed
+                    # remove previous entry i case file only changed
                     sed -i "\|; $file; |d" "$1"
                     get_details "$file" "$3" >> "$1"
                     name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
@@ -104,13 +110,15 @@ get_apps()
                     ! [[ -f "$4" ]] && touch "$4"
                     empty=false
                 done < <(find "$2" -cnewer "$1" -type f,l -name "*.desktop")
+                # update file to prevent repeated entering of the function
+                # if no file but only a dir changed state
                 $empty && sed -i '/^ *$/d' "$1"
             fi
         fi
     }
     # create lock file
     touch "$3"
-    # run the function in parallel
+    # run the function in parallel for appdirs
     for dir in $1
     do
         update_cache "$2" "$dir" "$5" "$4" &
@@ -159,8 +167,8 @@ execute()
     # with some apps on my system
     execute_desktop()
     {
-        # get exec
         entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+        # get exec
         command=$(grep "^Exec=" <<< "$entry" | sed "s/^Exec=//g; s/%. //g; s/%.$//g")
         # check if exec found
         if [[ -n "$command" ]]
@@ -180,7 +188,7 @@ execute()
             eval "$(printf '%b' "$command")" & # first execution location (.desktop file)
         # send error
         else
-            notify "Invalid desktop file"
+            notify "Invalid .desktop file"
         fi
     }
     # check if input is in cache and if true execute it with custom function or dex
@@ -233,7 +241,7 @@ execute()
     # check if specified to run as command
     if [[ $1 = $"~"* ]]
     then
-        command="${1:1}"
+        command=${1:1}
     else
         command=$1
     fi
@@ -268,7 +276,7 @@ exclude()
 
 ######################################### MAIN PART #########################################
 
-checkrunning "$lockfile"
+checkrunning "$cachedir" "$lockfile"
 # load variables from config file
 [[ -f "$configfile" ]] && source "$configfile"
 # check the arguments
@@ -297,6 +305,7 @@ do
     --benchmark)
         b=1
         ;;
+    # check other config options in args
     --addpath)
         addpath=1
         ;;
@@ -305,13 +314,12 @@ do
         ;;
     --prompt1=*)
         prompt1=${arg//--prompt1=/}
-        prompt1=${prompt1//\"/}
         ;;
     --prompt2=*)
         prompt2=${arg//--prompt2=/}
     esac
 done
-# configure menu command to use if not already set with the existing info collected before
+# configure menu command to use if not already set by --dmenu= or --benchmark
 if [[ $m != 1 && $b != 1 ]]
 then
     menu="${menu:-"dmenu"} $(sed -r 's/--clean//; s/--addpath//;
