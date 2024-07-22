@@ -215,7 +215,7 @@ execute()
             notify "Invalid .desktop file"
         fi
     }
-    # check if input is in cache and if true execute it with custom function or dex
+    # check if input is in cache and if true execute it
     run_app()
     {
         # check if input is in cache -> exists
@@ -270,17 +270,25 @@ execute()
         command=$1
     fi
     # check if input is an available command, ask for confirmation and run it
-    if command -v "$(awk '{print $1}' <<< "$command")" > /dev/null 2>&1
+    if command -v "$(awk '{print $1}' <<< \
+       "$(sed 's/^*//' <<< "$command")")" > /dev/null 2>&1
     then
-        if [[ $(printf "No\nYes" | \
-                eval "${menu//~prompt~/\'${7//~command~/\"$command\"}\'}") = "Yes" ]]
+        if [[ "$command" = $"*"* ]]
+        then
+            command=${command:1}
+            menu=${7//~prompt~/\'${9//~command~/\"$command\"}\'}
+            command="$5 -e ${SHELL:-"/bin/bash"} -c \"$command\""
+        else
+            menu=${7//~prompt~/\'${8//~command~/\"$command\"}\'}
+        fi
+        if [[ $(printf "No\nYes" | eval "${menu//~term~/$5}") = "Yes" ]]
         then
             $command & # fourth execution location (regular command)
         fi
     # send error and restart the script
     else
         notify "Invalid command"
-        $0 "$8" & # self execution
+        $0 "$10" & # self execution
     fi
 }
 
@@ -348,14 +356,21 @@ do
         ;;
     --prompt2=*)
         prompt2=${arg//--prompt2=/}
+        ;;
+    --prompt3=*)
+        prompt3=${arg//--prompt3=/}
+        ;;
+    --term=*)
+        term=${arg//--term=/}
     esac
 done
 # configure menu command to use if not already set by --dmenu= or --benchmark
 if [[ $m != 1 && $b != 1 ]]
 then
     menu="${menu:-"dmenu"} $(sed -r 's/--clean//; s/--addpath//;
-                             s/--hidedesktop//; s/--prompt(1|2)=.*( |$)//' <<< "$*")"
-    if [[ "$menu" != ".*-p .*~prompt~.*" ]]
+                             s/--hidedesktop//; s/--prompt(1|2|3)=.*( |$)//; 
+                             s/--term=.*( |$)//' <<< "$*")"
+    if [[ "$menu" != *"-p "*"~prompt~"* && "$menu" = "dmenu "* ]]
     then
         menu="$menu -p ~prompt~"
     fi
@@ -403,5 +418,7 @@ selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
 if [[ -n "$selection" ]] 
 then
     execute "$selection" "$entries" "$appcache" "$aliasesfile" \
-        "${term:-"alacritty"}" "$addpath" "${prompt2:-"Run ~command~ with bash?"}" "$*"
+        "${term:-"alacritty"}" "$addpath" "$menu" \
+        "${prompt2:-"Run ~command~ with bash?"}" \
+        "${prompt3:-"Run ~command~ in ~term~?"}" "$*"
 fi

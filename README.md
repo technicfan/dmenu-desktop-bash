@@ -12,16 +12,18 @@ l7-dmenu-desktop:
   or use the flag --addpath
 - to change menu that is used use --dmenu=\<menu\>
     - if using default menu (not --dmenu=), arguments will be passed to it
-- instead of your desired prompt write \~prompt\~ without quotation marks
+- instead of your desired prompt write \~prompt\~ without quotation marks in menu flag
 - to change the default prompts add variables to ~/.config/l7-dmenu-desktop/config 
-  or use flags --prompt1= and --prompt2=:
+  or use flags --prompt1=, --prompt2= and --prompt3=
     * prompt1=\<first prompt (the one you see on launch)\>
     * prompt2=\<second prompt (the confirmation on launching a program that is not on the list)\>
+    * prompt3=\<third prompt (the one you see when launching a program in terminal)\>
         - use \~command\~ to insert the command that is asked to be run
 - write ~\<command\> into the menu to directly run it with bash
+- write ~*\<command\> to additionally launch it in your terminal
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
-  to ~/.config/l7-dmenu-desktop/config
+  to ~/.config/l7-dmenu-desktop/config or using the flag --term=
 - to hide desktop entries add "hidedesktop=1" to ~/.config/l7-dmenu-desktop/config
   or use the flag --hidedesktop
 - use --benchmark to leave the menu command empty (eg. to measure the time)
