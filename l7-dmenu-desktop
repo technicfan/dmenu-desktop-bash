@@ -26,7 +26,7 @@
 
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
-lockfile="$cachedir/lock_desktop"
+lockfile="$cachedir/lock"
 appcache="$cachedir/apps"
 aliasescache="$cachedir/aliases"
 pathcache="$cachedir/path"
@@ -323,8 +323,7 @@ do
         ;;
     # remove files from cachedir?
     --clean)
-        [[ -f "$lockfile" ]] && rm "$lockfile"
-        [[ -f "$appcache" ]] && rm "$appcache"
+        rm "$cachedir/*"
         ;;
     # notify the script that no menu command should be used?
     --benchmark)
