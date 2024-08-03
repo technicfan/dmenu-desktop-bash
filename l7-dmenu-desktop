@@ -34,7 +34,6 @@ statusfile="$cachedir/changed"
 aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
 configfile="$configdir/config"
-lang=$(awk -F "_" '{print $1}' <<< "$LANG")
 appdirs=(
     "/usr/share/applications"
     "/usr/local/share/applications"
@@ -340,6 +339,7 @@ do
         ;;
     --term=*)
         term=${arg//--term=/}
+        ;;
     esac
 done
 # configure menu command to use if not already set by --dmenu= or --benchmark
@@ -364,10 +364,12 @@ echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
     entries=$(get_apps "${appdirs[*]}" "$appcache" \
-              "$lockfile" "$statusfile" "$lang" 2>/dev/null)
+              "$lockfile" "$statusfile" "${LANG//_*/}" 2>/dev/null)
 fi
+# check if path should be added
 if [[ $addpath = 1 ]]
 then
+    # check if it is possible
     if command -v "stest" > /dev/null 2>&1
     then
         if [[ -n "$entries" ]]
@@ -376,6 +378,7 @@ then
         else
             entries+=$(get_path "$pathcache" 2>/dev/null)
         fi
+    # prompt the user to make stest available
     else
         notify "Install dmenu (stest) to add items from PATH"
     fi

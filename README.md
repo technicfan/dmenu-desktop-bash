@@ -12,8 +12,8 @@ l7-dmenu-desktop:
   or use the flag --addpath (requires stest (from dmenu))
 - to change menu that is used use --dmenu=\<menu\>
     - if using default menu (not --dmenu=), arguments will be passed to it
-- write ~\<command\> into the menu to directly run it with bash
-- write ~*\<command\> to additionally launch it in your terminal
+- write *\<command\> into the menu to directly run it with bash
+- write ~\<command\> to launch it in your terminal
 - to clear the cache use --clean
 - if you are not using alacritty change the terminal by adding term=\<terminal\>
   to ~/.config/l7-dmenu-desktop/config or using the flag --term=
