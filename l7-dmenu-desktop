@@ -29,6 +29,7 @@ configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
 appcache="$cachedir/apps"
 aliasescache="$cachedir/aliases"
+pathcache="$cachedir/path"
 statusfile="$cachedir/changed"
 aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
@@ -178,6 +179,17 @@ get_aliases()
     fi
 }
 
+# stolen from dmenu (modified) -> stest required
+get_path()
+{
+    IFS=:
+    if ! [[ -f "$1" ]] || stest -dqr -n "$1" $PATH
+    then
+	    stest -flx $PATH | sort -u > "$1"
+    fi
+	cat "$1"
+}
+
 # excute the selected item
 execute()
 {
@@ -246,45 +258,26 @@ execute()
     else
         run_app "$1" "$3" "$5" "$7" && return
     fi
-    # prevent confirmation if addpath=1
-    if [[ $6 = 1 ]]
-    then
-        for entry in $2
-        do
-            if [[ "$1" = "$entry" ]]
-            then
-                $1 & # third execution location (command from path (with addpath=1))
-                return
-            fi
-        done
-    fi
     # check if specified to run as command
-    if [[ $1 = $"~"* ]]
+    if [[ $1 =~ ^\*.* ]]
     then
         command=${1:1}
     else
         command=$1
     fi
     # check if input is an available command, ask for confirmation and run it
-    if command -v "$(awk '{print $1}' <<< \
-       "$(sed 's/^\*//' <<< "$command")")" > /dev/null 2>&1
+    if command -v "$(awk '{sub(/^~/,""); print $1}' <<< "$command")" > /dev/null 2>&1
     then
-        if [[ "$command" = $"*"* ]]
+        # check if specified to run in terminal
+        if [[ "$command" =~ ^~.* ]]
         then
-            command=${command:1}
-            menu=${7//~prompt~/\'${9//~command~/\"$command\"}\'}
-            command="$5 -e ${SHELL:-"/bin/bash"} -c \"$command\""
-        else
-            menu=${7//~prompt~/\'${8//~command~/\"$command\"}\'}
+            command="$5 -e ${SHELL:-"/bin/bash"} -c \"${command:1}\""
         fi
-        if [[ $(printf "No\nYes" | eval "${menu//~term~/$5}") = "Yes" ]]
-        then
-            $command & # fourth execution location (regular command)
-        fi
+        eval "$command" & # third execution location (regular command)
     # send error and restart the script
     else
         notify "Invalid command"
-        $0 "${10}" & # self execution
+        $0 "$6" & # self execution
     fi
 }
 
@@ -320,10 +313,8 @@ do
             "--clean - clear cache and rebuild it" \
             "--benchmark - make menu command blank (eg. to test time)" \
             "--addpath - add items from path like dmenu (dmenu_path required)" \
-            "--hidedesktop - disable .desktop files" \
-            "--prompt1=<prompt1>" "--prompt2=<prompt2> - change prompts" "" \
-            "When not using --dmenu= flag arguments are passed to regular dmenu"\
-                "Instead of your desired prompt write ~prompt~ without quotation marks"
+            "--hidedesktop - disable .desktop files" "" \
+            "When not using --dmenu= flag arguments are passed to regular dmenu"
         exit 0
         ;;
     # check if custom dmenu command given
@@ -347,15 +338,6 @@ do
     --hidedesktop)
         hidedesktop=1
         ;;
-    --prompt1=*)
-        prompt1=${arg//--prompt1=/}
-        ;;
-    --prompt2=*)
-        prompt2=${arg//--prompt2=/}
-        ;;
-    --prompt3=*)
-        prompt3=${arg//--prompt3=/}
-        ;;
     --term=*)
         term=${arg//--term=/}
     esac
@@ -363,13 +345,9 @@ done
 # configure menu command to use if not already set by --dmenu= or --benchmark
 if [[ $m != 1 && $b != 1 ]]
 then
-    menu="${menu:-"dmenu"} $(sed -r 's/--clean//; s/--addpath//;
-                             s/--hidedesktop//; s/--prompt(1|2|3)=.*( |$)//; 
+    menu="${menu:-"dmenu -i -p 'Run:'"} $(sed -r 's/--clean//; s/--addpath//;
+                             s/--hidedesktop//; s/--prompt=.*( |$)//;
                              s/--term=.*( |$)//' <<< "$*")"
-    if [[ "$menu" != *"-p "*"~prompt~"* && "$menu" = "dmenu "* ]]
-    then
-        menu="$menu -p ~prompt~"
-    fi
 # don't need a menu command?
 elif [[ $b = 1 ]]
 then
@@ -390,16 +368,16 @@ then
 fi
 if [[ $addpath = 1 ]]
 then
-    if command -v "dmenu_path" > /dev/null 2>&1
+    if command -v "stest" > /dev/null 2>&1
     then
         if [[ -n "$entries" ]]
         then
-            entries+=$(echo && dmenu_path)
+            entries+=$(echo && get_path "$pathcache" 2>/dev/null)
         else
-            entries+=$(dmenu_path)
+            entries+=$(get_path "$pathcache" 2>/dev/null)
         fi
     else
-        notify "Install dmenu to add items from PATH"
+        notify "Install dmenu (stest) to add items from PATH"
     fi
 fi
 echo -ne "\r\033[K"
@@ -409,12 +387,11 @@ echo -ne "\r\033[K"
 # print apps/programs in menu system and get selection
 selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
               exclude "$excludefile" "$entries") | \
-              sort -u | eval "${menu//~prompt~/\'${prompt1:-"Run:"}\'}")
+              sort -u | eval "$menu")
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
 then
-    execute "$selection" "$entries" "$appcache" "$aliasesfile" \
-        "${term:-"alacritty"}" "$addpath" "$menu" \
-        "${prompt2:-"Run ~command~ with bash?"}" \
-        "${prompt3:-"Run ~command~ in ~term~?"}" "$*"
+    execute "$selection" "$entries" "$appcache" "$aliasesfile" "${term:-"alacritty"}" "$*"
 fi
+
+##############################################################################################
