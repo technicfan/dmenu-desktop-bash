@@ -394,7 +394,14 @@ selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
 then
-    execute "$selection" "$entries" "$appcache" "$aliasesfile" "${term:-"alacritty"}" "$*"
+    # set term variable
+    [ -z "$term" ] && term=alacritty
+    if ! command -v "$term" >/dev/null 2>&1
+    then
+        term=xterm
+    fi
+    # call execute function
+    execute "$selection" "$entries" "$appcache" "$aliasesfile" "$term" "$*"
 fi
 
 ##############################################################################################
