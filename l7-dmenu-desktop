@@ -29,7 +29,6 @@ configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock_desktop"
 appcache="$cachedir/apps"
 aliasescache="$cachedir/aliases"
-pathcache="$cachedir/path"
 statusfile="$cachedir/changed"
 aliasesfile="$configdir/aliases"
 excludefile="$configdir/excludes"
@@ -89,9 +88,6 @@ get_apps()
             # check if cache exists
             if ! [[ -f "$1" ]]
             then
-                #readarray -t files < <(find "$2" -type f,l -name "*.desktop")
-                #export -f get_details
-                #parallel -j12 get_details ::: "${files[@]}" ::: "$3" >> "$1"
                 # add found files
                 while read -r file
                 do
@@ -271,7 +267,7 @@ execute()
     fi
     # check if input is an available command, ask for confirmation and run it
     if command -v "$(awk '{print $1}' <<< \
-       "$(sed 's/^*//' <<< "$command")")" > /dev/null 2>&1
+       "$(sed 's/^\*//' <<< "$command")")" > /dev/null 2>&1
     then
         if [[ "$command" = $"*"* ]]
         then
@@ -288,7 +284,7 @@ execute()
     # send error and restart the script
     else
         notify "Invalid command"
-        $0 "$10" & # self execution
+        $0 "${10}" & # self execution
     fi
 }
 
@@ -413,7 +409,7 @@ echo -ne "\r\033[K"
 # print apps/programs in menu system and get selection
 selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
               exclude "$excludefile" "$entries") | \
-              sort -u | eval ${menu//~prompt~/\'${prompt1:-"Run:"}\'})
+              sort -u | eval "${menu//~prompt~/\'${prompt1:-"Run:"}\'}")
 # if anything selected, execute it
 if [[ -n "$selection" ]] 
 then
