@@ -323,7 +323,7 @@ do
         ;;
     # remove files from cachedir?
     --clean)
-        rm "$cachedir/*"
+        rm $cachedir/*
         ;;
     # notify the script that no menu command should be used?
     --benchmark)
