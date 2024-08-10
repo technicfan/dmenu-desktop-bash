@@ -304,7 +304,7 @@ for arg in "$@"
 do
     case $arg in
     # print help and exit
-    -h|--help)
+    --help)
         printf '%s\n' "l7-dmenu-desktop by Technicfan" \
             "licenced under MIT licence" \
             "https://github.com/Technicfan/l7-dmenu-desktop" "" \
