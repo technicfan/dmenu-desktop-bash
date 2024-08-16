@@ -104,19 +104,6 @@ get_apps()
             # check if there were any changes after last cache time
             elif [[ -n $(find "$2" -cnewer "$1" -type d,f,l) ]]
             then
-                # remove removed files from cache
-                while read -r file
-                do
-                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
-                    sed -i "\|; $file; |d" "$1"
-                    # also remove all numbered versions to prevent missing numbers
-                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                    # same file as above
-                    ! [[ -f "$4" ]] && touch "$4"
-                    empty=false
-                       # input files that are only in cache and not in dir
-                done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
-                                  <(find "$2" -type f,l -name "*.desktop" | sort -u))
                 # add/update new/changed files
                 while read -r file
                 do
@@ -128,11 +115,19 @@ get_apps()
                     sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
                     # same file as above
                     ! [[ -f "$4" ]] && touch "$4"
-                    empty=false
                 done < <(find "$2" -cnewer "$1" -type f,l -name "*.desktop")
-                # update file to prevent repeated entering of the function
-                # if no file but only a dir changed state
-                $empty && sed -i '/^ *$/d' "$1"
+                # remove removed files from cache
+                while read -r file
+                do
+                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
+                    sed -i "\|; $file; |d" "$1"
+                    # also remove all numbered versions to prevent missing numbers
+                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    # same file as above
+                    ! [[ -f "$4" ]] && touch "$4"
+                       # input files that are only in cache and not in dir
+                done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
+                                  <(find "$2" -type f,l -name "*.desktop" | sort -u))
             fi
         fi
     }
@@ -149,16 +144,24 @@ get_apps()
         wait "$pid"
     done
     # check for duplicates and number them to prevent missing entries if cache changed
-    [[ -f "$4" ]] && awk -i inplace -F "; " '
-    {
-        count[$1]++
-        if (count[$1] == 1 || $1 == "hidden") {
-            print $0
-        } else {
-            print $1 " (" count[$1]-1 "); " $2 "; " $3
+    if [[ -f "$4" ]]
+    then
+        awk -i inplace -F "; " '
+        {
+            count[$1]++
+            if (count[$1] == 1 || $1 == "hidden") {
+                print $0
+            } else {
+                print $1 " (" count[$1]-1 "); " $2 "; " $3
+            }
         }
-    }
-    ' "$2" && rm "$4"
+        ' "$2"
+        rm "$4"
+    else
+        # update file to prevent repeated entering of the function
+        # if no file but only a dir changed state
+        sed -i '/^ *$/d' "$1"
+    fi
     # print resulting app list
     grep "; 1$" "$2" | sed 's/;.*$//g'
     # remove lockfile
