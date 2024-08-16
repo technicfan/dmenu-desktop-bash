@@ -83,39 +83,27 @@ get_apps()
     # create or update the cache for one directory
     update_cache()
     {
-        if [[ -d "$2" ]]
+        if [[ -d "$3" ]]
         then
             # check if cache exists
-            if ! [[ -f "$1" ]]
+            if [[ -z "$2" ]]
             then
                 # add found files
                 while read -r file
                 do
-                    get_details "$file" "$3" >> "$1" &
+                    get_details "$file" "$4" >> "$1" &
                     pids+=($!)
                        # input .desktop files
-                done < <(find "$2" -type f,l -name "*.desktop")
+                done < <(find "$3" -type f,l -name "*.desktop")
                 for pid in "${pids[@]}"
                 do
                     wait "$pid"
                 done
                 # create file to signify change
-                ! [[ -f "$4" ]] && touch "$4"
+                ! [[ -f "$5" ]] && touch "$5"
             # check if there were any changes after last cache time
-            elif [[ -n $(find "$2" -cnewer "$1" -type d,f,l) ]]
+            elif [[ -n $(find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
             then
-                # add/update new/changed files
-                while read -r file
-                do
-                    # remove previous entry i case file only changed
-                    sed -i "\|; $file; |d" "$1"
-                    get_details "$file" "$3" >> "$1"
-                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
-                    # remove all numbered versions to prevent dulicate numbers
-                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                    # same file as above
-                    ! [[ -f "$4" ]] && touch "$4"
-                done < <(find "$2" -cnewer "$1" -type f,l -name "*.desktop")
                 # remove removed files from cache
                 while read -r file
                 do
@@ -124,19 +112,39 @@ get_apps()
                     # also remove all numbered versions to prevent missing numbers
                     sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
                     # same file as above
-                    ! [[ -f "$4" ]] && touch "$4"
+                    ! [[ -f "$5" ]] && touch "$5"
+                    empty=false
                        # input files that are only in cache and not in dir
-                done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$2" | sort -u) \
-                                  <(find "$2" -type f,l -name "*.desktop" | sort -u))
+                done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$3" | sort -u) \
+                                  <(find "$3" -type f,l -name "*.desktop" | sort -u))
+                # add/update new/changed files
+                while read -r file
+                do
+                    # remove previous entry i case file only changed
+                    sed -i "\|; $file; |d" "$1"
+                    get_details "$file" "$4" >> "$1"
+                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
+                    # remove all numbered versions to prevent dulicate numbers
+                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    # same file as above
+                    ! [[ -f "$5" ]] && touch "$5"
+                    empty=false
+                       # input files that were changed after last cache time
+                done < <(find "$3" -newerct "$2" -type f,l -name "*.desktop")
+                # update file to prevent repeated entering of the function
+                # if no file but only a dir changed state
+                $empty && sed -i '/^ *$/d' "$1"
             fi
         fi
     }
     # create lock file
     touch "$3"
+    # get time of last cache modification to check for changes
+    mtime=$(if [ -f "$2" ]; then stat -c "%y" "$2"; fi)
     # run the function in parallel for appdirs
     for dir in $1
     do
-        update_cache "$2" "$dir" "$5" "$4" &
+        update_cache "$2" "$mtime" "$dir" "$5" "$4" &
         pids+=($!)
     done
     for pid in "${pids[@]}"
@@ -144,24 +152,16 @@ get_apps()
         wait "$pid"
     done
     # check for duplicates and number them to prevent missing entries if cache changed
-    if [[ -f "$4" ]]
-    then
-        awk -i inplace -F "; " '
-        {
-            count[$1]++
-            if (count[$1] == 1 || $1 == "hidden") {
-                print $0
-            } else {
-                print $1 " (" count[$1]-1 "); " $2 "; " $3
-            }
+    [[ -f "$4" ]] && awk -i inplace -F "; " '
+    {
+        count[$1]++
+        if (count[$1] == 1 || $1 == "hidden") {
+            print $0
+        } else {
+            print $1 " (" count[$1]-1 "); " $2 "; " $3
         }
-        ' "$2"
-        rm "$4"
-    else
-        # update file to prevent repeated entering of the function
-        # if no file but only a dir changed state
-        sed -i '/^ *$/d' "$1"
-    fi
+    }
+    ' "$2" && rm "$4"
     # print resulting app list
     grep "; 1$" "$2" | sed 's/;.*$//g'
     # remove lockfile
