@@ -115,7 +115,6 @@ get_apps()
             # check if there were any changes after last cache time
             elif [[ -n $(find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
             then
-                notify "1"
                 # remove removed files from cache
                 while read -r file
                 do
