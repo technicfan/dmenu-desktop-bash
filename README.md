@@ -1,7 +1,7 @@
 l7-dmenu-desktop:
 - looks for .desktop files in ~/.local/share/applications/; /usr/share/applications/;
   /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
-    - will build cache on first run (takes about 250 ms on my system with 500 .desktop files)
+    - will build cache on first run (takes about 300 ms on my system with 500 .desktop files)
     - after initial caching will update on change (faster)
 - includes aliases from ~/.config/l7-dmenu-desktop/aliases
     - syntax: alias \<name\>=\<command/name\>
