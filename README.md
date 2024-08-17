@@ -40,4 +40,3 @@ l7-dmenu-desktop:
     - rm
     - comm
     - wc
-    - stat

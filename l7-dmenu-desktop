@@ -79,7 +79,8 @@ get_apps()
         then
             # try to find name in system language,
             # if not found use default one
-            name=$(awk -F "=" '{print $2}' \
+            #name=$(awk -F "=" '{print $2}' \
+            name=$(sed 's/^.*=//' \
                    <(grep "^Name\[$2\]=" <<< "$entry" || grep "^Name=" <<< "$entry"))
             [[ -n "$name" ]] && echo "$name""; ""$1""; 1"
         fi
@@ -114,6 +115,7 @@ get_apps()
             # check if there were any changes after last cache time
             elif [[ -n $(find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
             then
+                notify "1"
                 # remove removed files from cache
                 while read -r file
                 do
@@ -154,7 +156,8 @@ get_apps()
     # create lock file
     touch "$3"
     # get time of last cache modification to check for changes
-    mtime=$(if [ -f "$2" ]; then stat -c "%y" "$2"; fi)
+    # is sadly very slow :(
+    mtime=$(find "$2" -printf "%TY-%Tm-%Td %TH:%TM:%TS %Tz")
     # run the function in parallel for appdirs
     for dir in $1
     do
@@ -222,7 +225,7 @@ execute()
         # 2 - terminal to be used
         entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         # get exec
-        command=$(grep "^Exec=" <<< "$entry" | sed "s/^Exec=//g; s/%. //g; s/%.$//g")
+        command=$(grep "^Exec=" <<< "$entry" | sed -r "s/^Exec=//g; s/ %.( |$)//g")
         # check if exec found
         if [[ -n "$command" ]]
         then
