@@ -304,7 +304,7 @@ execute()
         eval "$command" & # third execution location (regular command)
     # send error
     else
-        return 1    
+        return 1
     fi
 }
 
@@ -431,7 +431,7 @@ then
     fi
     # call execute function
     execute "$selection" "$appcache" "$aliasesfile" "$term" || \
-        notify "Invalid command" && $0 "$*" &
+        ( notify "Invalid command" && $0 "$*" & )
 fi
 
 #############################################################################################
