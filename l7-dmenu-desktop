@@ -431,7 +431,7 @@ then
     fi
     # call execute function
     execute "$selection" "$appcache" "$aliasesfile" "$term" || \
-        ( notify "Invalid command" && $0 "$*" & )
+        ( notify "\"$selection\" is not a valid command" && $0 "$*" & )
 fi
 
 #############################################################################################
