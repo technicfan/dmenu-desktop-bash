@@ -45,6 +45,8 @@ appdirs=(
 # check if desktop file caching is already running to prevent cache curruption
 checkrunning()
 {
+    # 1 - cachedir
+    # 2 - lockfile
     [[ ! -e "$1" ]] && mkdir "$1"
     if [[ -f "$2" ]]
     then
@@ -57,6 +59,7 @@ checkrunning()
 # only send notification when command available
 notify()
 {
+    # 1 - content of the notification
     command -v "notify-send" > /dev/null 2>&1 && notify-send -a "l7-dmenu-desktop" "$1"
 }
 
@@ -66,6 +69,8 @@ get_apps()
     # get name of an app from its .desktop file and check if it should be displayed
     get_details()
     {
+        # 1 - .desktop file
+        # 2 - language
         [[ -f "$1" ]] && entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         if [[ -n $entry ]] && \
         ! grep -q "^NoDisplay=true" <<< "$entry" && \
@@ -83,6 +88,11 @@ get_apps()
     # create or update the cache for one directory
     update_cache()
     {
+        # 1 - appcache
+        # 2 - last modification time of appcache
+        # 3 - appdir
+        # 4 - language
+        # 5 - statusfile
         if [[ -d "$3" ]]
         then
             # check if cache exists
@@ -137,6 +147,11 @@ get_apps()
             fi
         fi
     }
+    # 1 - appdirs: array
+    # 2 - appcache
+    # 3 - lockfile
+    # 4 - language
+    # 5 - statusfile - file to signify change
     # create lock file
     touch "$3"
     # get time of last cache modification to check for changes
@@ -144,7 +159,7 @@ get_apps()
     # run the function in parallel for appdirs
     for dir in $1
     do
-        update_cache "$2" "$mtime" "$dir" "$5" "$4" &
+        update_cache "$2" "$mtime" "$dir" "$4" "$5" &
         pids+=($!)
     done
     for pid in "${pids[@]}"
@@ -152,7 +167,7 @@ get_apps()
         wait "$pid"
     done
     # check for duplicates and number them to prevent missing entries if cache changed
-    [[ -f "$4" ]] && awk -i inplace -F "; " '
+    [[ -f "$5" ]] && awk -i inplace -F "; " '
     {
         count[$1]++
         if (count[$1] == 1 || $1 == "hidden") {
@@ -161,7 +176,7 @@ get_apps()
             print $1 " (" count[$1]-1 "); " $2 "; " $3
         }
     }
-    ' "$2" && rm "$4"
+    ' "$2" && rm "$5"
     # print resulting app list
     grep "; 1$" "$2" | sed 's/;.*$//g'
     # remove lockfile
@@ -171,6 +186,8 @@ get_apps()
 # list the alias names from config file
 get_aliases()
 {
+    # 1 - aliasesfile - user config
+    # 2 - aliasescache
     if [[ -f "$1" ]]
     then
         if [[ "$1" -nt "$2" ]] || [[ ! -f "$2" ]]
@@ -184,6 +201,7 @@ get_aliases()
 # stolen from dmenu (modified) -> stest required
 get_path()
 {
+    # 1 - pathcache
     IFS=:
     if ! [[ -f "$1" ]] || stest -dqr -n "$1" $PATH
     then
@@ -201,6 +219,8 @@ execute()
     # with some apps on my system
     execute_desktop()
     {
+        # 1 - .desktop file
+        # 2 - terminal to be used
         entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         # get exec
         command=$(grep "^Exec=" <<< "$entry" | sed "s/^Exec=//g; s/%. //g; s/%.$//g")
@@ -228,6 +248,9 @@ execute()
     # check if input is in cache and if true execute it
     run_app()
     {
+        # 1 - name property of .desktop file
+        # 2 - appcache
+        # 3 - terminal to be used
         # check if input is in cache -> exists
         if [[ -f "$2" ]] && grep -q "^$1;" "$2"
         then
@@ -239,15 +262,18 @@ execute()
             return 1
         fi
     }
-
+    # 1 - selected item to execute
+    # 2 - appcache
+    # 3 - aliases file - user config
+    # 4 - terminal to be used
     # check if input is an alias and if run execute it
-    if [[ -f "$3" ]] && grep -q "^alias $1=" "$4"
+    if [[ -f "$2" ]] && grep -q "^alias $1=" "$3"
     then
-        target=$(grep "^alias $1=" "$4" | sed "s/alias $1=//g")
+        target=$(grep "^alias $1=" "$3" | sed "s/alias $1=//g")
         # check if it references a desktop entry
         if [[ "$target" = *"; desktop" ]]
         then
-            run_app "${target//; desktop/}" "$3" "$5" "$7" || \
+            run_app "${target//; desktop/}" "$2" "$4" || \
                                 notify "Invalid desktop alias"
         elif command -v "$(awk '{print $1}' <<< "$target")" > /dev/null 2>&1
         then
@@ -258,7 +284,7 @@ execute()
         return
     # try desktop file
     else
-        run_app "$1" "$3" "$5" "$7" && return
+        run_app "$1" "$2" "$4" && return
     fi
     # check if specified to run as command
     if [[ $1 =~ ^\*.* ]]
@@ -273,19 +299,20 @@ execute()
         # check if specified to run in terminal
         if [[ "$command" =~ ^~.* ]]
         then
-            command="$5 -e ${SHELL:-"/bin/bash"} -c \"${command:1}\""
+            command="$4 -e ${SHELL:-"/bin/bash"} -c \"${command:1}\""
         fi
         eval "$command" & # third execution location (regular command)
-    # send error and restart the script
+    # send error
     else
-        notify "Invalid command"
-        $0 "$6" & # self execution
+        return 1    
     fi
 }
 
 # remove excluded (excludefile) items from list
 exclude()
 {
+    # 1 - excludefile - user config
+    # 2 - entries
     list="$2"
     if [[ -f "$1" ]]
     then
@@ -366,7 +393,7 @@ echo -ne "looking for changes..."
 if [[ $hidedesktop != 1 ]]
 then
     entries=$(get_apps "${appdirs[*]}" "$appcache" \
-              "$lockfile" "$statusfile" "${LANG//_*/}" 2>/dev/null)
+              "$lockfile" "${LANG//_*/}" "$statusfile" 2>/dev/null)
 fi
 # check if path should be added
 if [[ $addpath = 1 ]]
@@ -403,7 +430,8 @@ then
         term=xterm
     fi
     # call execute function
-    execute "$selection" "$entries" "$appcache" "$aliasesfile" "$term" "$*"
+    execute "$selection" "$appcache" "$aliasesfile" "$term" || \
+        notify "Invalid command" && $0 "$*" &
 fi
 
 #############################################################################################
