@@ -105,7 +105,7 @@ get_apps()
                     get_details "$file" "$4" >> "$1" &
                     pids+=($!)
                        # input .desktop files
-                done < <(find "$3" -type f,l -name "*.desktop")
+                done < <(find -L "$3" -type f,l -name "*.desktop")
                 for pid in "${pids[@]}"
                 do
                     wait "$pid"
@@ -113,7 +113,7 @@ get_apps()
                 # create file to signify change
                 ! [[ -f "$5" ]] && touch "$5"
             # check if there were any changes after last cache time
-            elif [[ -n $(find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
+            elif [[ -n $(find -L "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
             then
                 # remove removed files from cache
                 while read -r file
@@ -127,7 +127,7 @@ get_apps()
                     empty=false
                        # input files that are only in cache and not in dir
                 done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$3" | sort -u) \
-                                  <(find "$3" -type f,l -name "*.desktop" | sort -u))
+                                  <(find -L "$3" -type f,l -name "*.desktop" | sort -u))
                 # add/update new/changed files
                 while read -r file
                 do
@@ -141,7 +141,7 @@ get_apps()
                     ! [[ -f "$5" ]] && touch "$5"
                     empty=false
                        # input files that were changed after last cache time
-                done < <(find "$3" -newerct "$2" -type f,l -name "*.desktop")
+                done < <(find -L "$3" -newerct "$2" -type f,l -name "*.desktop")
                 # update file to prevent repeated entering of the function
                 # if no file but only a dir changed state
                 $empty && sed -i '/^ *$/d' "$1"
