@@ -77,7 +77,6 @@ get_apps()
         then
             # try to find name in system language,
             # if not found use default one
-            #name=$(awk -F "=" '{print $2}' \
             name=$(sed 's/^.*=//' \
                    <(grep "^Name\[$2\]=" <<< "$entry" || grep "^Name=" <<< "$entry"))
             [[ -n "$name" ]] && echo "$name""; ""$1""; 1"
