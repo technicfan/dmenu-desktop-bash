@@ -73,9 +73,7 @@ get_apps()
         # 2 - language
         [[ -f "$1" ]] && entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         if [[ -n $entry ]] && \
-        ! grep -q "^NoDisplay=true" <<< "$entry" && \
-        ! grep -q "^Hidden=true" <<< "$entry" && \
-          grep -q "^Type=Application" <<< "$entry"
+        ! grep -qP "^NoDisplay=true|^Hidden=true|^Type=(?!(Application$))" <<< "$entry"
         then
             # try to find name in system language,
             # if not found use default one
