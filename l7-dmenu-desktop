@@ -71,9 +71,9 @@ get_apps()
     {
         # 1 - .desktop file
         # 2 - language
-        [[ -f "$1" ]] && entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
+        [[ -f "$1" ]] && entry=$(sed -n '/^\[Desktop Entry\]/,/^\[/p' "$1")
         if [[ -n $entry ]] && \
-        ! grep -qP "^NoDisplay=true|^Hidden=true|^Type=(?!(Application$))" <<< "$entry"
+        ! grep -qP "^(NoDisplay|Hidden)=true$|^Type=(?!(Application$))" <<< "$entry"
         then
             # try to find name in system language,
             # if not found use default one
@@ -81,7 +81,7 @@ get_apps()
                    <(grep "^Name\[$2\]=" <<< "$entry" || grep "^Name=" <<< "$entry"))
             [[ -n "$name" ]] && echo "$name""; ""$1""; 1"
         fi
-        [[ -z "$name" ]] && echo "hidden; ""$1""; 0"
+        [[ -z "$name" ]] && echo "None; ""$1""; 0"
     }
     # create or update the cache for one directory
     update_cache()
@@ -110,7 +110,7 @@ get_apps()
                 # create file to signify change
                 ! [[ -f "$5" ]] && touch "$5"
             # check if there were any changes after last cache time
-            elif [[ -n $(find -L "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \)) ]]
+            elif [[ -n $(find -L "$3" \( -newerct "$2" -o -newermt "$2" \) \( -type f,l -name "*.desktop" -o -type d \)) ]]
             then
                 # remove removed files from cache
                 while read -r file
@@ -138,7 +138,7 @@ get_apps()
                     ! [[ -f "$5" ]] && touch "$5"
                     empty=false
                        # input files that were changed after last cache time
-                done < <(find -L "$3" -newerct "$2" -type f,l -name "*.desktop")
+                done < <(find -L "$3" \( -newerct "$2" -o -newermt "$2" \) -type f,l -name "*.desktop")
                 # update file to prevent repeated entering of the function
                 # if no file but only a dir changed state
                 $empty && sed -i '/^ *$/d' "$1"
@@ -168,7 +168,7 @@ get_apps()
     [[ -f "$4" ]] && awk -i inplace -F "; " '
     {
         count[$1]++
-        if (count[$1] == 1 || $1 == "hidden") {
+        if (count[$1] == 1 || $1 == "None") {
             print $0
         } else {
             print $1 " (" count[$1]-1 "); " $2 "; " $3
