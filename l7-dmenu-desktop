@@ -102,7 +102,7 @@ get_apps()
                     get_details "$file" "$4" >> "$1" &
                     pids+=($!)
                        # input .desktop files
-                done < <(find -L "$3" -type f,l -name "*.desktop")
+                done < <(find "$3" -type f,l -name "*.desktop")
                 for pid in "${pids[@]}"
                 do
                     wait "$pid"
@@ -110,7 +110,7 @@ get_apps()
                 # create file to signify change
                 ! [[ -f "$5" ]] && touch "$5"
             # check if there were any changes after last cache time
-            elif [[ -n $(find -L "$3" \( -newerct "$2" -o -newermt "$2" \) \( -type f,l -name "*.desktop" -o -type d \)) ]]
+            elif find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \) | grep -q .
             then
                 # remove removed files from cache
                 while read -r file
@@ -119,26 +119,41 @@ get_apps()
                     sed -i "\|; $file; |d" "$1"
                     # also remove all numbered versions to prevent missing numbers
                     sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    notify "removed $name"
                     # same file as above
                     ! [[ -f "$5" ]] && touch "$5"
                     empty=false
                        # input files that are only in cache and not in dir
                 done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$3" | sort -u) \
-                                  <(find -L "$3" -type f,l -name "*.desktop" | sort -u))
+                                  <(find "$3" -type f,l -name "*.desktop" | sort -u))
                 # add/update new/changed files
                 while read -r file
                 do
-                    # remove previous entry i case file only changed
+                    if grep "; $file; " "$1"; then up=1; fi
+                    # remove previous entry in case file only changed
                     sed -i "\|; $file; |d" "$1"
-                    get_details "$file" "$4" >> "$1"
-                    name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
-                    # remove all numbered versions to prevent dulicate numbers
-                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                    details=$(get_details "$file" "$4")
+                    echo "$details" >> "$1"
+                    #get_details "$file" "$4" >> "$1"
+                    #name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
+                    #name="$(sed 's/;.*//g' <<< "$details")"
+                    name="${details//;*/}"
+                    if [[ $name != "None" ]]
+                    then
+                        # remove all numbered versions to prevent dulicate numbers
+                        sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
+                        if [[ $up = 1 ]]
+                        then
+                            notify "updated $name"
+                        else
+                            notify "added $name"
+                        fi
+                    fi
                     # same file as above
                     ! [[ -f "$5" ]] && touch "$5"
                     empty=false
                        # input files that were changed after last cache time
-                done < <(find -L "$3" \( -newerct "$2" -o -newermt "$2" \) -type f,l -name "*.desktop")
+                done < <(find "$3" -newerct "$2" -type f,l -name "*.desktop")
                 # update file to prevent repeated entering of the function
                 # if no file but only a dir changed state
                 $empty && sed -i '/^ *$/d' "$1"
@@ -221,7 +236,7 @@ execute()
         # 2 - terminal to be used
         entry=$(sed -n '/\[Desktop Entry\]/,/^\[/p' "$1")
         # get exec
-        command=$(grep "^Exec=" <<< "$entry" | sed -r "s/^Exec=//g; s/ %.( |$)//g")
+        command=$(grep "^Exec=" <<< "$entry" | sed -r "s/^Exec=//g; s/ (%.( |$))*/ /g")
         # check if exec found
         if [[ -n "$command" ]]
         then
