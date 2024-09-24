@@ -117,7 +117,7 @@ update_cache()
                 sed -i "\|; $file; |d" "$1"
                 # also remove all numbered versions to prevent missing numbers
                 sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                notify "removed $name"
+                #notify "removed $name"
                 # same file as above
                 ! [[ -f "$5" ]] && touch "$5"
                 empty=false
@@ -127,25 +127,22 @@ update_cache()
             # add/update new/changed files
             while read -r file
             do
-                if grep "; $file; " "$1"; then up=1; fi
+                #if grep -q "; $file; " "$1"; then up=1; fi
                 # remove previous entry in case file only changed
                 sed -i "\|; $file; |d" "$1"
                 details=$(get_details "$file" "$4")
                 echo "$details" >> "$1"
-                #get_details "$file" "$4" >> "$1"
-                #name="$(grep "$file; 1$" "$1" | sed 's/;.*//g')"
-                #name="$(sed 's/;.*//g' <<< "$details")"
                 name="${details//;*/}"
                 if [[ $name != "None" ]]
                 then
                     # remove all numbered versions to prevent dulicate numbers
                     sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                    if [[ $up = 1 ]]
-                    then
-                        notify "updated $name"
-                    else
-                        notify "added $name"
-                    fi
+                    #if [[ $up = 1 ]]
+                    #then
+                    #    notify "updated $name"
+                    #else
+                    #    notify "added $name"
+                    #fi
                 fi
                 # same file as above
                 ! [[ -f "$5" ]] && touch "$5"
