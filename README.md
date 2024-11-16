@@ -1,4 +1,4 @@
-l7-dmenu-desktop:
+### l7-dmenu-desktop:
 - looks for .desktop files in ~/.local/share/applications/; /usr/share/applications/;
   /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
     - will build cache on first run 
@@ -23,22 +23,12 @@ l7-dmenu-desktop:
 - use --benchmark to leave the menu command empty (eg. to measure the time)
 - to change the default menu command "menu=\<menu\>" to ~/.config/l7-dmenu-desktop/config
 
-**Important**
-- commands that need to be available:
-    - dmenu (if no other similar menu specified)
-        - stest (for path items)
-    - alacritty (if no other terminal emulator specified)
-    - notify-send (optional for notifications)
-    - bash :)
-    - sed
-    - grep
-    - awk
-    - find
-    - sort
-    - cat
-    - touch
-    - rm
-    - comm
-    - wc
-    - tee
-    - tail
+### Dependencies:
+  - dmenu (if no other similar menu specified)
+      - stest (for path items)
+  - alacritty (if no other terminal emulator specified)
+  - notify-send (optional for notifications)
+  - bash :)
+  - grep
+  - find
+  - coreutils
