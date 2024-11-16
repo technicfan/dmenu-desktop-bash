@@ -27,7 +27,7 @@
 cachedir="$HOME/.cache/l7-dmenu-desktop"
 configdir="$HOME/.config/l7-dmenu-desktop"
 lockfile="$cachedir/lock"
-appcache="$cachedir/apps"
+appcache="$cachedir/apps.csv"
 aliasescache="$cachedir/aliases"
 pathcache="$cachedir/path"
 statusfile="$cachedir/changed"
@@ -76,9 +76,9 @@ get_details()
         # if not found use default one
         name=$(sed 's/^.*=//' \
                 <(grep "^Name\[$2\]=" <<< "$entry" || grep "^Name=" <<< "$entry"))
-        [[ -n "$name" ]] && echo "$name""; ""$1""; 1"
+        [[ -n "$name" ]] && echo "$name"",""$1"",1"
     fi
-    [[ -z "$name" ]] && echo "None; ""$1""; 0"
+    [[ -z "$name" ]] && echo "None,""$1"",0"
 }
 
 # create or update the cache for one directory
@@ -94,6 +94,7 @@ update_cache()
         # check if cache exists
         if [[ -z "$2" ]]
         then
+            echo "Name,File,Display" > "$1"
             # add found files
             while read -r file
             do
@@ -113,37 +114,24 @@ update_cache()
             # remove removed files from cache
             while read -r file
             do
-                name="$(grep "$file; 1$" "$1" | sed 's/;.*//g; s/ (\([0-9]*\))$//g')"
-                sed -i "\|; $file; |d" "$1"
+                name="$(grep "$file,1$" "$1" | sed 's/,.*//g; s/ (\([0-9]*\))$//g')"
+                sed -i "\|,$file,|d" "$1"
                 # also remove all numbered versions to prevent missing numbers
-                sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                #notify "removed $name"
+                sed -i "s/^$name (\([0-9]*\)),/$name,/g" "$1"
                 # same file as above
                 ! [[ -f "$5" ]] && touch "$5"
                 empty=false
                     # input files that are only in cache and not in dir
-            done < <(comm -23 <(awk -F "; " '{print $2}' "$1" | grep "$3" | sort -u) \
+            done < <(comm -23 <(awk -F "," '{print $2}' <(tail +2 "$1") | grep "$3" | sort -u) \
                                 <(find "$3" -type f,l -name "*.desktop" | sort -u))
             # add/update new/changed files
             while read -r file
             do
-                #if grep -q "; $file; " "$1"; then up=1; fi
                 # remove previous entry in case file only changed
-                sed -i "\|; $file; |d" "$1"
-                details=$(get_details "$file" "$4")
-                echo "$details" >> "$1"
-                name="${details//;*/}"
-                if [[ $name != "None" ]]
-                then
-                    # remove all numbered versions to prevent dulicate numbers
-                    sed -i "s/^$name (\([0-9]*\)); /$name; /g" "$1"
-                    #if [[ $up = 1 ]]
-                    #then
-                    #    notify "updated $name"
-                    #else
-                    #    notify "added $name"
-                    #fi
-                fi
+                sed -i "\|,$file,|d" "$1"
+                name=$(awk -F "," '{ if ($3 == 1) {print $1} }' <(get_details "$file" "$4" | tee -a "$1"))
+                # remove all numbered versions to prevent dulicate numbers
+                sed -i "s/^$name (\([0-9]*\)),/$name,/g" "$1"
                 # same file as above
                 ! [[ -f "$5" ]] && touch "$5"
                 empty=false
@@ -179,18 +167,24 @@ get_apps()
         wait "$pid"
     done
     # check for duplicates and number them to prevent missing entries if cache changed
-    [[ -f "$4" ]] && awk -i inplace -F "; " '
+    [[ -f "$4" ]] && awk -i inplace -F "," '
     {
-        count[$1]++
-        if (count[$1] == 1 || $1 == "None") {
+        second = $2
+        second_copy = second
+        gsub(/.*\//, "", second_copy)
+        count[second_copy]++
+        if (count[second_copy] == 1) {
+            count[$1]++
+        }
+        if (count[$1] == 1 || $1 == "None" || count[second_copy] > 1) {
             print $0
         } else {
-            print $1 " (" count[$1]-1 "); " $2 "; " $3
+            print $1 " (" count[$1]-1 ")," $2 "," $3
         }
     }
     ' "$2" && rm "$4"
     # print resulting app list
-    grep "; 1$" "$2" | sed 's/;.*$//g'
+    awk -F "," '{ if ($3 == 1) {print $1} }' "$2"
     # remove lockfile
     rm "$3"
 }
@@ -217,12 +211,11 @@ get_path()
     IFS=:
     if ! [[ -f "$1" ]] || stest -dqr -n "$1" $PATH
     then
-	    stest -flx $PATH | sort -u > "$1"
+	    stest -flx $PATH | sort -u | tee "$1"
     fi
-	cat "$1"
 }
 
-# execute a desktop file by extracting infos manually,
+# execute a desktop file by extracting the info manually,
 # because I didn't find a good solution to do this and it's fun;)
 # while dex is the best one I found it has some bugs which make it not work
 # with some apps on my system
@@ -262,10 +255,10 @@ run_app()
     # 2 - appcache
     # 3 - terminal to be used
     # check if input is in cache -> exists
-    if [[ -f "$2" ]] && grep -q "^$1;" "$2"
+    if [[ -f "$2" ]] && grep -q "^$1," <(tail +2 "$2")
     then
         # get and execute .desktop file
-        file="$(grep "^$1;" "$2" | awk -F "; " '{print $2}')"
+        file="$(grep "^$1," "$2" | awk -F "," '{print $2}')"
         execute_desktop "$file" "$3"
         return
     else
@@ -429,7 +422,7 @@ fi
 echo -ne "\r\033[K"
 # print info about read and found .desktop files/apps
 [[ $hidedesktop != 1 ]] && echo "Read $(wc -l < "$appcache") .desktop files," \
-                                "found $(wc -l < <(grep "; 1$" "$appcache")) apps." &
+                                "found $(wc -l < <(grep ",1$" "$appcache")) apps." &
 # print apps/programs in menu system and get selection
 selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
               exclude "$excludefile" "$entries") | \
