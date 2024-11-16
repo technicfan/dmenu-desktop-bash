@@ -382,8 +382,7 @@ done
 if [[ $m != 1 && $b != 1 ]]
 then
     menu="${menu:-"dmenu -i -p 'Run:'"} $(sed -r 's/--clean//; s/--addpath//;
-                             s/--hidedesktop//; s/--prompt=.*( |$)//;
-                             s/--term=.*( |$)//' <<< "$*")"
+                             s/--hidedesktop//; s/--term=.*( |$)//' <<< "$*")"
 # don't need a menu command?
 elif [[ $b = 1 ]]
 then
