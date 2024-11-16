@@ -94,7 +94,7 @@ update_cache()
         # check if cache exists
         if [[ -z "$2" ]]
         then
-            echo "Name,File,Display" > "$1"
+            echo "Name,File,Show" > "$1"
             # add found files
             while read -r file
             do
