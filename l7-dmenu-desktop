@@ -258,7 +258,7 @@ run_app()
     if [[ -f "$2" ]] && grep -q "^$1," <(tail +2 "$2")
     then
         # get and execute .desktop file
-        file="$(grep "^$1," "$2" | awk -F "," '{print $2}')"
+        file="$(grep "^$1," "$2" | awk -F "," '{print $2}' | sort | awk 'NR==1')"
         execute_desktop "$file" "$3"
         return
     else
