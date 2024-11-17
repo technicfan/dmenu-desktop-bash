@@ -76,9 +76,9 @@ get_details()
         # if not found use default one
         name=$(sed 's/^.*=//' \
                 <(grep "^Name\[$2\]=" <<< "$entry" || grep "^Name=" <<< "$entry"))
-        [[ -n "$name" ]] && echo "$name"",""$1"",1"
+        [[ -n "$name" ]] && echo "$name,${1//*\/},$1,1"
     fi
-    [[ -z "$name" ]] && echo "None,""$1"",0"
+    [[ -z "$name" ]] && echo "None,${1//*\/},$1,0"
 }
 
 # create or update the cache for one directory
@@ -94,7 +94,7 @@ update_cache()
         # check if cache exists
         if [[ -z "$2" ]]
         then
-            echo "Name,File,Show" > "$1"
+            echo "Name,ID,File,Show" > "$1"
             # add found files
             while read -r file
             do
@@ -169,22 +169,19 @@ get_apps()
     # check for duplicates and number them to prevent missing entries if cache changed
     [[ -f "$4" ]] && awk -i inplace -F "," '
     {
-        second = $2
-        second_copy = second
-        gsub(/.*\//, "", second_copy)
-        count[second_copy]++
-        if (count[second_copy] == 1) {
+        count[$2]++
+        if (count[$2] == 1 && $1 != "None") {
             count[$1]++
         }
-        if (count[$1] == 1 || $1 == "None" || count[second_copy] > 1) {
+        if (count[$1] <= 1 || count[$2] > 1) {
             print $0
         } else {
-            print $1 " (" count[$1]-1 ")," $2 "," $3
+            print $1 " (" count[$1]-1 ")," $2 "," $3 "," $4
         }
     }
     ' "$2" && rm "$4"
     # print resulting app list
-    awk -F "," '{ if ($3 == 1) {print $1} }' "$2"
+    awk -F "," '{ if ($4 == 1) {print $1} }' "$2"
     # remove lockfile
     rm "$3"
 }
@@ -258,7 +255,7 @@ run_app()
     if [[ -f "$2" ]] && grep -q "^$1," <(tail +2 "$2")
     then
         # get and execute .desktop file
-        file="$(grep "^$1," "$2" | awk -F "," '{print $2}' | sort | awk 'NR==1')"
+        file="$(grep "^$1," "$2" | awk -F "," '{print $3}' | sort | awk 'NR==1')"
         execute_desktop "$file" "$3"
         return
     else
