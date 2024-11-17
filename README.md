@@ -1,6 +1,6 @@
 ### l7-dmenu-desktop:
 - looks for .desktop files in ~/.local/share/applications/; /usr/share/applications/;
-  /var/lib/flatpak/exports/share/applications/; ~/.local/flatpak/exports/share/applications/
+  /var/lib/flatpak/exports/share/applications/; ~/.local/share/flatpak/exports/share/applications/
     - will build cache on first run 
         - takes about 300 ms on my system (i5-12400) with 500 .desktop files
     - after initial caching will update on change (faster)

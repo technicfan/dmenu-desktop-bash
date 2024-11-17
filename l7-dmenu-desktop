@@ -39,7 +39,7 @@ appdirs=(
     "/usr/local/share/applications"
     "$HOME/.local/share/applications"
     "/var/lib/flatpak/exports/share/applications"
-    "$HOME/.local/flatpak/exports/share/applications"
+    "$HOME/.local/share/flatpak/exports/share/applications"
 )
 
 # check if desktop file caching is already running to prevent cache curruption
