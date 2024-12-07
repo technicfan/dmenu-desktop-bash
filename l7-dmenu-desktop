@@ -111,10 +111,12 @@ update_cache()
         # check if there were any changes after last cache time
         elif find "$3" -newerct "$2" \( -type f,l -name "*.desktop" -o -type d \) | grep -q .
         then
+            logfile="$cachedir/log"
             # remove removed files from cache
             while read -r file
             do
                 name="$(grep "$file,1$" "$1" | sed 's/,.*//g; s/ (\([0-9]*\))$//g')"
+                echo "remove $(awk -F "," '{print $2}' <(grep "$file,1$" "$1"))" >> "$logfile"
                 sed -i "\|,$file,|d" "$1"
                 # also remove all numbered versions to prevent missing numbers
                 sed -i "s/^$name (\([0-9]*\)),/$name,/g" "$1"
@@ -122,24 +124,38 @@ update_cache()
                 ! [[ -f "$5" ]] && touch "$5"
                 empty=false
                     # input files that are only in cache and not in dir
-            done < <(comm -23 <(awk -F "," '{print $2}' <(tail +2 "$1") | grep "$3" | sort -u) \
+            done < <(comm -23 <(awk -F "," '{print $3}' "$1" | grep "$3" | sort -u) \
                                 <(find "$3" -type f,l -name "*.desktop" | sort -u))
-            # add/update new/changed files
-            while read -r file
-            do
-                # remove previous entry in case file only changed
-                sed -i "\|,$file,|d" "$1"
-                name=$(awk -F "," '{ if ($3 == 1) {print $1} }' <(get_details "$file" "$4" | tee -a "$1"))
-                # remove all numbered versions to prevent dulicate numbers
-                sed -i "s/^$name (\([0-9]*\)),/$name,/g" "$1"
-                # same file as above
-                ! [[ -f "$5" ]] && touch "$5"
-                empty=false
-                    # input files that were changed after last cache time
-            done < <(find "$3" -newerct "$2" -type f,l -name "*.desktop")
+            # flatpaks symlinks are weird
+            if [[ "$3" = *"flatpak"* ]]
+            then
+                updated=$( (comm -13 <(awk -F "," '{print $3}' "$1" | grep "$3" | sort -u) \
+                                     <(find "$3" -type f,l -name "*.desktop" | sort -u) && \
+                            find "$3" -newerct "$2" -type f,l -name "*.desktop") | awk '!seen[$0]++')
+            else
+                updated=$(find "$3" -newerct "$2" -type f,l -name "*.desktop")
+            fi
+            if [[ -n "$updated" ]]
+            then
+                # add/update new/changed files
+                while read -r file
+                do
+                    # remove previous entry in case file only changed
+                    sed -i "\|,$file,|d" "$1"
+                    details=$(get_details "$file" "$4" | tee -a "$1")
+                    name=$(awk -F "," '{ if ($3 == 1) {print $1} }' <<< "$details")
+                    echo "add/update $(awk -F "," '{print $2}' <<< "$details")" >> "$logfile"
+                    # remove all numbered versions to prevent dulicate numbers
+                    sed -i "s/^$name (\([0-9]*\)),/$name,/g" "$1"
+                    # same file as above
+                    ! [[ -f "$5" ]] && touch "$5"
+                    empty=false
+                        # input files that were changed after last cache time
+                done <<< "$updated"
+            fi
             # update file to prevent repeated entering of the function
             # if no file but only a dir changed state
-            $empty && sed -i '/^ *$/d' "$1"
+            $empty && sed -i '/^ *$/d' "$1" || echo -e "\n$2\n_______\n" >> "$logfile"
         fi
     fi
 }
@@ -357,7 +373,8 @@ do
         ;;
     # remove files from cachedir?
     --clean)
-        rm "$cachedir"/*
+        rm "$aliasescache"
+        rm "$appcache"
         ;;
     # notify the script that no menu command should be used?
     --benchmark)
