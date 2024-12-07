@@ -185,10 +185,8 @@ get_apps()
     # check for duplicates and number them to prevent missing entries if cache changed
     [[ -f "$4" ]] && awk -i inplace -F "," '
     {
+        count[$1]++
         count[$2]++
-        if (count[$2] == 1 && $1 != "None") {
-            count[$1]++
-        }
         if (count[$1] <= 1 || count[$2] > 1) {
             print $0
         } else {
