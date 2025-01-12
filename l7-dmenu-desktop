@@ -442,7 +442,7 @@ selection=$( (get_aliases "$aliasesfile" "$aliasescache" & \
 if [[ -n "$selection" ]] 
 then
     # set term variable
-    [ -z "$term" ] && term=alacritty
+    [ -z "$term" ] && term=kitty
     if ! command -v "$term" >/dev/null 2>&1
     then
         term=xterm
