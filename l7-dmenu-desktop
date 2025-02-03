@@ -289,7 +289,7 @@ execute()
     then
         target=$(grep "^alias $1=" "$3" | sed "s/alias $1=//g")
         # check if it references a desktop entry
-        if [[ "$target" = *"; desktop" ]]
+        if [[ "$target" =~ .*(; desktop)$ ]]
         then
             run_app "${target//; desktop/}" "$2" "$4" || \
                                 notify "Invalid desktop alias"
