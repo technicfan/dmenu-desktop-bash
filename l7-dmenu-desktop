@@ -253,6 +253,7 @@ execute_desktop()
         fi
         # execute the resulting command
         eval "$(printf '%b' "$command")" & # first execution location (.desktop file)
+        disown $!
     # send error
     else
         notify "Invalid .desktop file"
@@ -296,6 +297,7 @@ execute()
         elif command -v "$(awk '{print $1}' <<< "$target")" > /dev/null 2>&1
         then
             $target & # second execution location (alias)
+            disown $!
         else
             notify "Invalid alias"
         fi
@@ -320,6 +322,7 @@ execute()
             command="$4 -e ${SHELL:-"/bin/bash"} -c \"${command:1}\""
         fi
         eval "$command" & # third execution location (regular command)
+        disown $!
     # send error
     else
         return 1
