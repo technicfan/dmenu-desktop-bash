@@ -1,9 +1,9 @@
-#!/bin/bash
+#!//bin/env bash
 
 ##################################################################################
 # MIT License                                                                    #
 #                                                                                #
-# Copyright (c) 2024 Technicfan                                                  #
+# Copyright (c) 2025 technicfan                                                  #
 #                                                                                #
 # Permission is hereby granted, free of charge, to any person obtaining a copy   #
 # of this software and associated documentation files (the "Software"), to deal  #
@@ -24,8 +24,8 @@
 # SOFTWARE.                                                                      #
 ##################################################################################
 
-cachedir="$HOME/.cache/l7-dmenu-desktop"
-configdir="$HOME/.config/l7-dmenu-desktop"
+cachedir="$HOME/.cache/dmenu-desktop-bash"
+configdir="$HOME/.config/dmenu-desktop-bash"
 lockfile="$cachedir/lock"
 appcache="$cachedir/apps.csv"
 aliasescache="$cachedir/aliases"
@@ -60,7 +60,7 @@ checkrunning()
 notify()
 {
     # 1 - content of the notification
-    command -v "notify-send" > /dev/null 2>&1 && notify-send -a "l7-dmenu-desktop" "$1"
+    command -v "notify-send" > /dev/null 2>&1 && notify-send -a "dmenu-desktop-bash" "$1"
 }
 
 # get name of an app from its .desktop file and check if it should be displayed
@@ -296,7 +296,7 @@ execute()
                                 notify "Invalid desktop alias"
         elif command -v "$(awk '{print $1}' <<< "$target")" > /dev/null 2>&1
         then
-            $target & # second execution location (alias)
+            eval "$target" & # second execution location (alias)
             disown $!
         else
             notify "Invalid alias"
@@ -356,9 +356,9 @@ do
     case $arg in
     # print help and exit
     --help)
-        printf '%s\n' "l7-dmenu-desktop by Technicfan" \
+        printf '%s\n' "dmenu-desktop-bash by technicfan" \
             "licenced under MIT licence" \
-            "https://github.com/Technicfan/l7-dmenu-desktop" "" \
+            "https://github.com/Technicfan/dmenu-desktop-bash" "" \
             "--dmenu=<menu> - change menu command" \
             "--clean - clear cache and rebuild it" \
             "--benchmark - make menu command blank (eg. to test time)" \
